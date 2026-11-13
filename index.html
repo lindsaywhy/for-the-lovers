@@ -556,7 +556,11 @@ function save(name){
   if(!room) return Promise.resolve();
   pending[name] = (pending[name]||0) + 1;
   queues[name] = (queues[name]||Promise.resolve())
-    .then(()=>rpc("ftl_set", {p_room:room.id, p_secret:room.secret, p_key:name, p_data:body}))
+    .then(()=>{
+      /* Boundaries and notes hold both people's answers: send only this phone's part, so saving at the same time never erases the other. */
+      if(name==="boundaries") return rpc("ftl_merge", {p_room:room.id, p_secret:room.secret, p_key:name, p_patch:{[me]:body[me]||{}, custom:body.custom||[]}});
+      if(name==="notes") return rpc("ftl_merge", {p_room:room.id, p_secret:room.secret, p_key:name, p_patch:{[me]:body[me]||null}});
+      return rpc("ftl_set", {p_room:room.id, p_secret:room.secret, p_key:name, p_data:body}); })
     .then(v=>{ versions[name] = v; online(true); })
     .catch(()=>{ online(false); toast("Couldn't save. Check your connection."); })
     .finally(()=>{ pending[name]--; });
@@ -659,7 +663,13 @@ function pickCard(n, excludeId, drawer, sameDeck){
   const c = pool[Math.floor(Math.random()*pool.length)];
   return {id:c.id, deck:c.deck, kind:c.kind, text:fill(c.text, drawer), checkIn:needsCheckIn(c)};
 }
-function draw(forWho){
+async function draw(forWho){
+  if(room){ await pull(); const c=S.live.card;
+    if(nightN()>0 && c && !c.done && S.live.by!==me){ toast(nm(S.live.by)+" already drew. Listen up."); render(); return; }
+    if(nightN()>0 && c && c.done && other(S.live.by)!==me){ toast("It's "+nm(other(S.live.by))+"'s turn."); render(); return; } }
+  drawNow(forWho);
+}
+function drawNow(forWho){
   if(!me){ askWho(); return; }
   const who = typeof forWho==="string" ? forWho : me;
   const today = ymd(new Date()); const n = nightN()+1;
