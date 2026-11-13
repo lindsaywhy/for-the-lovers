@@ -147,6 +147,16 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
 .jar{display:flex;flex-wrap:wrap;gap:4px;min-height:44px;padding:12px;border:2px solid var(--line);border-top-width:6px;border-radius:14px 14px 28px 28px;background:var(--surface)}
 .jh{width:22px;height:20px;display:inline-block}
 .jh svg{width:100%;height:100%;fill:var(--rose);display:block}
+.levelup{position:fixed;inset:0;z-index:40;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;text-align:center;padding:24px;background:radial-gradient(circle at 50% 45%,#2a5a43ee,#0a1711f2);cursor:pointer}
+.levelup.show{animation:lu .5s cubic-bezier(.2,.8,.2,1)}
+@keyframes lu{from{opacity:0;transform:scale(.92)}to{opacity:1;transform:none}}
+@media (prefers-reduced-motion:reduce){.levelup.show{animation:none}}
+.lu-emoji{font-size:56px;line-height:1}
+.lu-name{font-family:var(--display);font-size:44px;line-height:1.05;color:var(--rose);text-wrap:balance}
+.lu-line{font-size:16px;color:var(--fg);max-width:28ch}
+.guess{display:flex;flex-direction:column;gap:8px;background:var(--bg2);border:1px dashed var(--amber);border-radius:16px;padding:14px}
+.guess-res{text-align:center;font-weight:500}
+.guess-res.ok{color:var(--d-date)}
 .checkin{text-align:center;font-size:13px;color:var(--amber);border:1px solid var(--line);border-radius:12px;padding:8px 12px}
 .nudge{display:flex;gap:12px;align-items:center;justify-content:space-between;background:var(--surface);border:1px solid var(--rose);border-radius:16px;padding:12px 14px}
 .bline{display:flex;gap:10px;align-items:center;justify-content:space-between;flex-wrap:wrap;padding-top:10px;border-top:1px solid var(--line)}
@@ -239,6 +249,7 @@ nav.tabs button.tab-play[aria-current="page"]{background:var(--rose);color:var(-
   </div>
 </div>
 <div class="toast" id="toast" hidden></div>
+<div class="levelup" id="lvlUp" hidden role="status" aria-live="polite"></div>
 
 <script>
 const DECKS = {
@@ -972,10 +983,12 @@ function viewPlay(){
   const myTurn = !fresh || !c || (c.done && nextUp===me);
   const out=[ header() ];
   out.push(heatMeter());
+  out.push(guessScoreLine());
   out.push($("div",{class:"turn"}, !(fresh && c) ? "Ready when you are"
     : open ? (mine ? (c.kind==="ask" ? "Ask "+nm(other(me))+" this one" : "This one's on you") : [$("em",{text:nm(by)}),"'s turn"])
     : myTurn ? "Your turn" : [$("em",{text:nm(nextUp)}),"'s turn"]));
   out.push($("div",{class:"stage"},cardEl()));
+  out.push(...guessUI());
   if(fresh && S.live.card && S.live.card.swCheck && !S.live.card.done) out.push($("div",{class:"checkin",text: S.settings.safeword ? `First brat card tonight. Both of you say your safeword out loud before ${nm(by)} reads it: \u201c${S.settings.safeword}.\u201d If either of you says it, everything stops.` : `First brat card tonight. Before ${nm(by)} reads it, pick a safeword together and save it in Boundaries. If either of you says it, everything stops.`}));
   if(fresh && S.live.card && S.live.card.checkIn && (mine || S.live.card.done)) out.push($("div",{class:"checkin",text:"Check in first: one of you said Maybe to this. Ask, and either of you can pass."}));
   out.push($("div",{class:"actions"},
@@ -1264,6 +1277,60 @@ function viewWizard(){
   return [header(), top, $("div",{class:"form wcard"},...card.filter(Boolean))];
 }
 
+/* ---------- level-up moments ---------- */
+const LEVEL_EMOJI = ["🎶","💕","🌙","🔥"];
+const LEVEL_LINE = ["Tonight starts here. Ease into it.","The flirting starts now.","Things are turning up.","Grown and spicy. No skipping."];
+function checkLevelUp(){
+  const n=nightN(); if(!n || !room_ok()) return;
+  const L=HEAT.indexOf(heatFor(n)), key="ftl_lvl_"+ymd(new Date()), prev=lsGet(key,null);
+  if(prev!==null && L<=prev) return;
+  lsSet(key,L);
+  const el=document.getElementById("lvlUp"); if(!el) return;
+  el.innerHTML="";
+  el.append($("div",{class:"lu-emoji",text:LEVEL_EMOJI[L]}),$("div",{class:"eyebrow",text: L===0 ? "Game night" : "Level up"}),$("div",{class:"lu-name",text:HEAT[L].name}),$("div",{class:"lu-line",text:LEVEL_LINE[L]}));
+  el.hidden=false; el.classList.remove("show"); void el.offsetWidth; el.classList.add("show");
+  try{ navigator.vibrate && navigator.vibrate(60); }catch(e){}
+  clearTimeout(checkLevelUp.t); checkLevelUp.t=setTimeout(()=>{ el.hidden=true; },2600);
+  el.onclick=()=>{ el.hidden=true; };
+}
+function room_ok(){ try{ return typeof room==="undefined" || !!room; }catch(e){ return true; } }
+/* ---------- guess my answer ---------- */
+/* On yes-or-no Be Honest cards, whoever's asking guesses the answer first. */
+function isYesNo(c){ return c && (c.deck==="yesno"||c.deck==="jyesno") && /^(Real question… |Be honest… |Tell the truth… |Okay, random question… )?(Do|Did|Does|Would|Is|Are|Have|Can|You|Want)\b/i.test(c.text); }
+function guessScore(){ const g=S.live.guesses||{}; return g.night===ymd(new Date()) ? g : {night:ymd(new Date()),a:0,b:0}; }
+function setGuess(v){ S.live=Object.assign({},S.live,{card:Object.assign({},S.live.card,{guess:v})}); save("live"); render(); }
+function settleGuess(actual){
+  const c=S.live.card, right=c.guess===actual, sc=guessScore();
+  if(right) sc[S.live.by]=(sc[S.live.by]||0)+1;
+  S.live=Object.assign({},S.live,{guesses:sc, card:Object.assign({},c,{answer:actual, right})}); save("live");
+  toast(right ? "You know them 🎯" : "Not this time 😅"); render();
+}
+function guessUI(){
+  const c=S.live.card; if(nightN()===0 || !c || c.done || !isYesNo(c)) return [];
+  const asker=S.live.by, mine=asker===me, other_=nm(other(asker)), who=other(asker)==="b"?"he":"she";
+  const box=$("div",{class:"guess"});
+  if(c.answer){
+    box.append($("div",{class:"guess-res"+(c.right?" ok":"")},
+      c.right ? `${nm(asker)} guessed ${c.guess==="yes"?"yes":"no"} and nailed it 🎯` : `${nm(asker)} guessed ${c.guess==="yes"?"yes":"no"}. ${other_} said ${c.answer==="yes"?"yes":"no"} 😅`));
+  } else if(mine){
+    if(!c.guess){
+      box.append($("div",{class:"eyebrow",text:"Guess first"}),$("p",{class:"wp",style:"font-size:14px",text:`Before you ask, what do you think ${other_} will say?`}),
+        $("div",{class:"wans row3"},$("button",{class:"wbtn small",onclick:()=>setGuess("yes"),text:"I think yes"}),$("button",{class:"wbtn small",onclick:()=>setGuess("no"),text:"I think no"})),
+        $("button",{class:"btn small ghost",style:"align-self:center",onclick:()=>setGuess("skip"),text:"Skip the guess"}));
+    } else if(c.guess!=="skip"){
+      box.append($("div",{class:"eyebrow",text:`You guessed ${c.guess}. Now ask ${other_}.`}),$("p",{class:"wp",style:"font-size:14px",text:`What did ${who} say?`}),
+        $("div",{class:"wans row3"},$("button",{class:"wbtn small wb-yes",onclick:()=>settleGuess("yes"),text:"Yes"}),$("button",{class:"wbtn small wb-no",onclick:()=>settleGuess("no"),text:"No"})));
+    } else return [];
+  } else {
+    if(c.guess && c.guess!=="skip") box.append($("p",{class:"wp",style:"font-size:14px;text-align:center",text:`${nm(asker)} made a guess about your answer. Keep them guessing 😏`}));
+    else return [];
+  }
+  return [box];
+}
+function guessScoreLine(){
+  const sc=guessScore(); if(!(sc.a||sc.b)) return null;
+  return $("p",{class:"muted",style:"margin:0;text-align:center;font-size:13px",text:`Guessed right tonight: ${nm("a")} ${sc.a||0} · ${nm("b")} ${sc.b||0}`});
+}
 function viewLocked(){
   return [$("div",{class:"form",style:"margin-top:40px;text-align:center;align-items:center"},
     $("div",{class:"logo",style:"width:96px;height:96px"}),
@@ -1276,6 +1343,7 @@ function render(){
   document.querySelector("nav.tabs").hidden=false;
   const v = tab==="home"?viewHome():tab==="play"?viewPlay():tab==="memories"?viewMemories():tab==="limits"?viewBoundaries():viewSettings();
   app.append(...v.flat().filter(Boolean)); renderTabs();
+  checkLevelUp();
 }
 loadLocal(); render(); connect();
 </script>
