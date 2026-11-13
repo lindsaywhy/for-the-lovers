@@ -1,0 +1,1215 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="robots" content="noindex,nofollow">
+<meta name="theme-color" content="#0d1d16">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="For the Lovers">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 200 200'%3E%3Ccircle cx='100' cy='100' r='96' fill='%230d1d16' stroke='%23f4a6bf' stroke-width='8'/%3E%3Ctext x='100' y='132' text-anchor='middle' font-family='Impact,sans-serif' font-size='96' fill='%23f4a6bf'%3EYJ%3C/text%3E%3C/svg%3E">
+<title>For the Lovers</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Gloock&family=Anton&family=Pinyon+Script&family=Outfit:wght@300;400;500;600;800&display=swap">
+<style>
+/* Layout: a single late-night screen — dashboard, a big playing card, and a tab bar along the bottom. Deliberately one dark look: his deep forest green, her pink. */
+:root{
+  --bg:#0d1d16;
+  --bg2:#132a20;
+  --surface:#1a3629;
+  --line:#2c4d3e;
+  --fg:#f7eef0;
+  --muted:#a9c2b5;
+  --rose:#f4a6bf;
+  --amber:#f9cdd8;
+  --deep:#0a1711;
+  --d-know:#8fc4d9; --d-sweet:#f9cdd8; --d-flirty:#f4a6bf; --d-date:#9fd8a8; --d-dark:#e0609a; --d-wild:#e8d9b0; --d-brat:#ff6fae; --d-deep:#b9a7e8; --d-yesno:#ffb38a; --d-yessir:#7fd6c2; --d-music:#f2c27b;
+  --display:"Gloock", Georgia, "Times New Roman", serif;
+  --body:"Outfit", system-ui, -apple-system, "Segoe UI", sans-serif;
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+html,body{height:100%}
+body{background:var(--bg);color:var(--fg);font-family:var(--body);font-size:15px;line-height:1.5;
+  background-image:radial-gradient(120% 60% at 50% -10%, #1f4a35 0%, transparent 60%);background-attachment:fixed}
+.wrap{max-width:560px;margin:0 auto;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:20px 110px;display:flex;flex-direction:column;gap:18px}
+h1,h2,h3{font-family:var(--display);font-weight:400;margin:0;text-wrap:balance}
+button{font:inherit;color:inherit;cursor:pointer}
+button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible{outline:2px solid var(--amber);outline-offset:2px}
+.eyebrow{font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted)}
+.muted{color:var(--muted)}
+.row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.btn{border:1px solid var(--line);background:var(--surface);border-radius:999px;padding:10px 16px;font-weight:500}
+.btn.primary{background:var(--rose);color:var(--deep);border-color:var(--rose)}
+.btn.ghost{background:transparent}
+.btn.small{padding:6px 12px;font-size:13px}
+.btn:disabled{opacity:.5;cursor:default}
+
+/* header */
+.top{display:flex;justify-content:space-between;align-items:flex-end;gap:12px}
+.top h1{font-size:30px;line-height:1.1}
+.brand{display:flex;align-items:center;gap:12px;min-width:0}
+.logo{width:72px;height:72px;flex-shrink:0;filter:drop-shadow(0 4px 0 rgba(0,0,0,.35))}
+.logo svg{width:100%;height:100%;display:block}
+@media (max-width:380px){.logo{width:56px;height:56px}.top h1{font-size:24px}}
+.top h1 em{font-style:normal;color:var(--rose)}
+.who{font-size:12px;color:var(--muted);border:1px solid var(--line);border-radius:999px;padding:4px 10px;background:transparent}
+.sync{font-size:11px;color:var(--muted)}
+
+/* dashboard */
+.stats{display:grid;grid-template-columns:1fr;gap:12px}
+.stat{background:var(--bg2);border:1px solid var(--line);border-radius:18px;padding:16px;display:flex;flex-direction:column;gap:4px;min-width:0}
+.stat .big{font-family:var(--display);font-size:40px;line-height:1;color:var(--amber);font-variant-numeric:tabular-nums}
+.stat .big small{font-family:var(--body);font-size:14px;color:var(--muted);margin-left:4px}
+.cal{background:var(--bg2);border:1px solid var(--line);border-radius:14px;padding:10px 12px;display:flex;flex-direction:column;gap:6px}
+.calgrid{display:flex;flex-wrap:wrap;gap:4px}
+.calgrid span{width:7px;height:7px;border-radius:50%;background:var(--surface)}
+.calgrid .on{background:var(--rose);box-shadow:0 0 6px #f4a6bf88}
+.calgrid .today{outline:1px solid var(--amber);outline-offset:1px}
+.goal{height:6px;background:var(--surface);border-radius:999px;overflow:hidden}
+.goal i{display:block;height:100%;background:linear-gradient(90deg,var(--rose),var(--amber));border-radius:999px}
+.start{font-family:var(--display);font-size:22px;padding:18px;border-radius:20px;border:0;background:linear-gradient(135deg,var(--rose),var(--amber));color:var(--deep);box-shadow:0 10px 30px #f4a6bf33}
+
+/* heat + boundaries */
+.heatwrap{display:flex;flex-direction:column;gap:6px}
+.heat{display:grid;grid-template-columns:repeat(4,1fr);gap:4px}
+.heat i{height:6px;border-radius:999px;background:var(--surface)}
+.heat i.lit{background:linear-gradient(90deg,var(--amber),var(--rose))}
+.heat i.lit:last-child{background:var(--d-dark)}
+.cool{display:flex;flex-direction:column;gap:6px;font-size:13px;color:var(--amber)}
+.cool .btn{align-self:flex-start}
+.btn.sw{border-color:var(--d-dark);color:var(--d-dark);background:transparent}
+.connect{display:flex;flex-direction:column;gap:6px}
+.seg.wide{display:grid;grid-template-columns:repeat(3,1fr)}
+.seg.wide button{padding:9px 6px}
+.seg.wide button[aria-pressed="true"]{background:var(--rose);color:var(--deep)}
+.card .stamp{position:absolute;top:18px;right:18px;z-index:2;transform:rotate(8deg);border:2px solid var(--d-date);color:#2c7a4f;font-weight:600;letter-spacing:.14em;text-transform:uppercase;font-size:12px;padding:3px 10px;border-radius:8px;background:#fdf3f5}
+.card.done .text{opacity:.75}
+.level{display:flex;flex-direction:column;gap:8px;padding-top:12px;border-top:1px solid var(--line)}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chip.paused{opacity:.45;border-style:dashed}
+.chip{font-size:12px;padding:3px 10px;border-radius:999px;border:1px solid var(--line);color:var(--fg)}
+.pacein{display:flex;align-items:center;gap:6px;flex-shrink:0}
+.pacein input{width:64px;text-align:center}
+.srow{display:flex;align-items:center;justify-content:space-between;gap:12px;padding-top:12px;border-top:1px solid var(--line)}
+.srow>details{flex:1;min-width:0}
+.lvl summary{list-style:none;cursor:pointer}
+.lvl summary::-webkit-details-marker{display:none}
+.stepper{display:flex;align-items:center;gap:6px;flex-shrink:0}
+.stepper button{width:36px;height:36px;border-radius:50%;border:1px solid var(--line);background:var(--surface);font-size:18px;line-height:1;padding:0}
+.stepper button:disabled{opacity:.35;cursor:default}
+.stepper output{min-width:26px;text-align:center;font-variant-numeric:tabular-nums;font-weight:600;font-size:17px}
+.switch{width:50px;height:30px;border-radius:999px;background:var(--surface);border:1px solid var(--line);position:relative;flex-shrink:0;padding:0;cursor:pointer}
+.switch::after{content:"";position:absolute;top:3px;left:3px;width:22px;height:22px;border-radius:50%;background:var(--muted);transition:left .2s,background .2s}
+.switch[aria-checked="true"]{background:var(--rose);border-color:var(--rose)}
+.switch[aria-checked="true"]::after{left:23px;background:var(--deep)}
+.brow{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;gap:10px;padding-top:10px;border-top:1px solid var(--line)}
+.bname{min-width:0}
+.bline1{display:flex;align-items:center;gap:8px}
+.seg.tight button{padding:6px 9px;font-size:12px}
+.pdot{display:inline-block;width:10px;height:10px;border-radius:50%;flex-shrink:0;vertical-align:middle}
+.pd-yes{background:var(--d-date)}.pd-maybe{background:var(--amber)}.pd-no{background:var(--d-dark)}.pd-none{border:1.5px solid var(--muted);box-sizing:border-box}
+.legend2{display:flex;flex-wrap:wrap;gap:6px 14px;font-size:12px;color:var(--muted)}
+.sumgrp{display:flex;flex-direction:column;gap:6px;padding-top:10px;border-top:1px solid var(--line)}
+.sumgrp b{font-size:13px;font-weight:600}
+.chip.c-yes{border-color:var(--d-date);color:var(--d-date)}.chip.c-maybe{border-color:var(--amber);color:var(--amber)}.chip.c-no{border-color:var(--d-dark);color:var(--d-dark)}
+.prog{flex:1;height:5px;border-radius:999px;background:var(--surface);overflow:hidden;margin:0 10px;min-width:30px}
+.prog i{display:block;height:100%;background:var(--rose)}
+.stack{display:flex;flex-direction:column;gap:6px}
+.wtop{display:flex;align-items:center;gap:10px}
+.wtop .prog{flex:1}
+.wcard{gap:16px;padding:22px 18px}
+.wq{font-size:26px;line-height:1.2}
+.wp{margin:0;font-size:15px;line-height:1.55}
+.wkey{display:flex;flex-direction:column;gap:8px;font-size:14px;background:var(--surface);border-radius:14px;padding:12px 14px}
+.wgame{display:flex;flex-direction:column;gap:4px;background:#fdf3f5;color:#163024;border-radius:14px;padding:12px 14px;font-family:var(--display);font-size:17px;line-height:1.3}
+.wgame .eyebrow{font-family:var(--body);color:#5b7a6a}
+.wtip{font-size:13px;line-height:1.5;border-left:3px solid var(--amber);padding:2px 0 2px 10px;color:var(--fg)}
+.wans{display:flex;flex-direction:column;gap:8px}
+.wans.row3{flex-direction:row}
+.wans.row3 .wbtn{flex:1;padding:10px 6px;font-size:13px}
+.wbtn{width:100%;text-align:left;padding:14px 16px;border-radius:14px;border:1px solid var(--line);background:var(--surface);font-size:15px;font-weight:500}
+.wans.row3 .wbtn{text-align:center}
+.wbtn.wb-yes[aria-pressed="true"]{background:var(--d-date);color:var(--deep);border-color:var(--d-date)}
+.wbtn.wb-maybe[aria-pressed="true"]{background:var(--amber);color:var(--deep);border-color:var(--amber)}
+.wbtn.wb-no[aria-pressed="true"]{background:var(--d-dark);color:var(--deep);border-color:var(--d-dark)}
+.wpair{display:flex;flex-direction:column;gap:6px;padding-top:10px;border-top:1px solid var(--line)}
+.wnav{display:flex;justify-content:space-between;align-items:center;gap:10px}
+.wbig{align-self:stretch;padding:14px;font-size:16px}
+.wpromo{border-color:var(--rose)}
+.checkin{text-align:center;font-size:13px;color:var(--amber);border:1px solid var(--line);border-radius:12px;padding:8px 12px}
+.nudge{display:flex;gap:12px;align-items:center;justify-content:space-between;background:var(--surface);border:1px solid var(--rose);border-radius:16px;padding:12px 14px}
+.bline{display:flex;gap:10px;align-items:center;justify-content:space-between;flex-wrap:wrap;padding-top:10px;border-top:1px solid var(--line)}
+.seg{display:flex;border:1px solid var(--line);border-radius:999px;overflow:hidden;flex-shrink:0}
+.seg button{background:transparent;border:0;padding:6px 12px;font-size:13px;color:var(--muted)}
+.seg button+button{border-left:1px solid var(--line)}
+.seg button:disabled{cursor:default}
+.seg .seg-yes[aria-pressed="true"]{background:var(--d-date);color:var(--deep)}
+.seg .seg-maybe[aria-pressed="true"]{background:var(--amber);color:var(--deep)}
+.bgroup summary{display:flex;justify-content:space-between;align-items:center;gap:10px;cursor:pointer;list-style:none}
+.bgroup summary::-webkit-details-marker{display:none}
+.bgroup summary::after{content:"+";color:var(--muted);font-size:20px}
+.bgroup[open] summary::after{content:"\2013"}
+.bgroup[open] summary{margin-bottom:4px}
+.theirs{font-size:11px;color:var(--muted);margin-top:3px;letter-spacing:.02em}
+.theirs.no{color:var(--d-dark)}
+.seg .seg-no[aria-pressed="true"]{background:var(--d-dark);color:var(--deep)}
+
+/* play */
+.turn{font-family:var(--display);font-size:22px;text-align:center}
+.turn em{font-style:normal;color:var(--rose)}
+.stage{perspective:1200px;display:flex;justify-content:center}
+.card{width:100%;max-width:380px;aspect-ratio:5/7;border-radius:24px;background:linear-gradient(160deg,#fdf3f5,#f6dfe6);color:#163024;padding:22px;display:flex;flex-direction:column;justify-content:space-between;box-shadow:0 24px 60px #00000080,0 0 0 1px #ffffff20;position:relative;overflow:hidden}
+.card::after{content:"";position:absolute;inset:10px;border:1px solid color-mix(in srgb,var(--dc) 70%,transparent);border-radius:16px;pointer-events:none}
+.card .deck{display:flex;justify-content:space-between;align-items:center;font-size:11px;letter-spacing:.16em;text-transform:uppercase;font-weight:600;color:#2c5a43;position:relative;z-index:1}
+
+.card .kind{font-size:10px;letter-spacing:.12em;padding:4px 9px;border-radius:999px;white-space:nowrap}
+.card .kind-ask{background:#163024;color:#fdf3f5}
+.card .kind-do{background:var(--dc);color:#163024}
+.card .text{font-family:var(--display);font-size:clamp(22px,6vw,30px);line-height:1.2;text-wrap:balance;position:relative;z-index:1}
+.card .foot{display:flex;justify-content:space-between;font-size:12px;color:#5b7a6a;position:relative;z-index:1}
+.card.back{background:radial-gradient(circle at 50% 40%,#235a40,#0f2419);color:var(--fg);align-items:center;justify-content:center;text-align:center;gap:10px}
+.card.back .text{font-size:24px}
+.card.swipeable{touch-action:pan-y;cursor:grab;transition:transform .22s ease,opacity .22s ease;user-select:none}
+.card.swipeable.dragging{transition:none;cursor:grabbing}
+.card.flip{animation:flip .55s cubic-bezier(.2,.8,.2,1)}
+@keyframes flip{from{transform:rotateY(80deg) translateY(10px);opacity:.2}to{transform:none;opacity:1}}
+@media (prefers-reduced-motion:reduce){.card.flip{animation:none}}
+.actions{display:flex;gap:10px;justify-content:center;flex-wrap:wrap}
+.reveal{background:var(--surface);border:1px solid var(--amber);border-radius:16px;padding:14px;display:flex;flex-direction:column;gap:6px}
+.mission{background:var(--bg2);border:1px dashed var(--line);border-radius:16px;padding:14px;display:flex;flex-direction:column;gap:10px}
+.mission .secret{font-family:var(--display);font-size:18px}
+
+/* memories */
+.mem{display:flex;flex-direction:column;gap:10px}
+.memitem{background:var(--bg2);border:1px solid var(--line);border-left:4px solid var(--dc);border-radius:14px;padding:12px 14px;display:flex;flex-direction:column;gap:4px;min-width:0}
+.memitem p{margin:0;font-family:var(--display);font-size:17px;line-height:1.3}
+.memitem small{color:var(--muted);font-size:12px}
+.empty{color:var(--muted);text-align:center;padding:30px 10px;border:1px dashed var(--line);border-radius:16px}
+
+/* settings */
+.form{display:flex;flex-direction:column;gap:14px;background:var(--bg2);border:1px solid var(--line);border-radius:18px;padding:16px}
+.field{display:flex;flex-direction:column;gap:6px;min-width:0}
+.field label{font-size:12px;color:var(--muted);letter-spacing:.06em}
+input,select,textarea{font:inherit;color:var(--fg);background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:10px 12px;width:100%}
+textarea{resize:vertical;min-height:70px}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.customlist{display:flex;flex-direction:column;gap:6px;font-size:13px}
+.customlist div{display:flex;gap:8px;align-items:flex-start;justify-content:space-between}
+.customlist span{min-width:0}
+
+/* tabs */
+nav.tabs{position:fixed;left:0;right:0;bottom:0;background:#0d1d16f2;backdrop-filter:blur(10px);border-top:1px solid var(--line);
+  padding-bottom:max(10px,env(safe-area-inset-bottom,0px));padding-top:8px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));z-index:5}
+nav.tabs div{max-width:560px;margin:0 auto;display:grid;grid-template-columns:repeat(5,1fr);gap:4px}
+nav.tabs button{background:transparent;border:0;border-radius:12px;padding:8px 2px;font-size:11px;min-width:0;color:var(--muted);display:flex;flex-direction:column;align-items:center;gap:2px}
+nav.tabs button svg{width:20px;height:20px}
+nav.tabs button[aria-current="page"]{color:var(--rose);background:var(--surface)}
+nav.tabs button.tab-play{background:var(--rose);color:var(--deep);font-weight:600}
+nav.tabs button.tab-play[aria-current="page"]{background:var(--rose);color:var(--deep);box-shadow:0 0 0 2px var(--amber)}
+
+/* who overlay */
+.overlay{position:fixed;inset:0;background:#0a1711ee;display:grid;place-items:center;z-index:20;padding:20px}
+.overlay .box{background:var(--bg2);border:1px solid var(--line);border-radius:22px;padding:24px;max-width:360px;width:100%;display:flex;flex-direction:column;gap:14px;text-align:center}
+.overlay .box h2{font-size:26px}
+.toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(84px + env(safe-area-inset-bottom,0px));background:var(--amber);color:var(--deep);padding:8px 16px;border-radius:999px;font-size:13px;font-weight:500;z-index:30}
+@media (max-width:380px){.stats{grid-template-columns:1fr}}
+</style>
+<style>[hidden]{display:none!important}html{padding-top:env(safe-area-inset-top,0px)}body{margin:0}</style>
+</head>
+<body>
+
+<div class="wrap" id="app"></div>
+<nav class="tabs" aria-label="Sections"><div id="tabs"></div></nav>
+<div class="overlay" id="whoBox" hidden>
+  <div class="box">
+    <h2>Who's playing?</h2>
+    <p class="muted" style="margin:0">So the game knows whose turn it is on this phone.</p>
+    <div class="row" style="justify-content:center" id="whoBtns"></div>
+  </div>
+</div>
+<div class="toast" id="toast" hidden></div>
+
+<script>
+const DECKS = {
+  know:  {name:"Get to Know You", color:"var(--d-know)"},
+  sweet: {name:"Sweet", color:"var(--d-sweet)"},
+  flirty:{name:"Flirty", color:"var(--d-flirty)"},
+  date:  {name:"Date Night", color:"var(--d-date)"},
+  dark:  {name:"After Dark", color:"var(--d-dark)"},
+  wild:  {name:"Wild Card", color:"var(--d-wild)"},
+  brat:  {name:"Brat", color:"var(--d-brat)"},
+  deep:  {name:"Deep Talk", color:"var(--d-deep)"},
+  yesno: {name:"Be Honest", color:"var(--d-yesno)"},
+  yessir:{name:"Yes Sir", color:"var(--d-yessir)"},
+  jyesno:{name:"Be Honest", color:"var(--d-yesno)"},
+  music: {name:"Soundtrack", color:"var(--d-music)"}
+};
+/* Every card: t = text, g = boundary topics, r = who draws it ("brat" = Her, "tamer" = Him), lvl = earliest heat stage.
+   {you} = the other person, {brat} = Her, {tamer} = Him. Ask decks are questions for the other person; the rest are for whoever drew. */
+const ASK_DECKS = ["know","deep","yesno","jyesno","yessir"];
+/* Which levels each card belongs to (0 Slow Jams, 1 Catching Feelings, 2 Late Night, 3 No Skips).
+   Most cards follow their category; the ones listed in LV_CARD are placed by their own vibe. */
+const LV_DECK = {music:[0], know:[0,1], sweet:[0,1], date:[0,1], wild:[0,1], deep:[1], flirty:[1,2], dark:[3], brat:[2,3]};
+const LV_CARD = {
+  "flirty-0":[2,3],"flirty-2":[2,3],"flirty-3":[1],"flirty-4":[2,3],"flirty-5":[2],"flirty-8":[1],"flirty-10":[2,3],"flirty-11":[2,3],"flirty-12":[1],"flirty-14":[2,3],"flirty-15":[2,3],
+  "dark-1":[2,3],"dark-2":[2,3],"dark-5":[2,3],"dark-8":[2,3],"dark-13":[2,3],"dark-14":[2,3],"dark-16":[2,3],"dark-17":[2,3],
+  "deep-15":[1,2],"deep-16":[1,2],"deep-17":[1,2],"deep-20":[1,2],"deep-22":[1,2],
+  "wild-5":[2,3],"wild-6":[2,3],"wild-7":[2,3],
+  "date-8":[1],"sweet-14":[1]};
+function lvOf(deck, i, x){ const id=deck+"-"+i; if(LV_CARD[id]) return LV_CARD[id]; if(x && x.lvl) return [x.lvl]; return LV_DECK[deck] || [0,1,2,3]; }
+const CARDS = {
+know:[
+ {t:"What's the one food you'd eat every day if nobody was watching?"},
+ {t:"What song takes you straight back to being 16?"},
+ {t:"What were you obsessed with when you were little?"},
+ {t:"If you could wake up great at one thing tomorrow, what you picking?"},
+ {t:"What's the best compliment somebody ever gave you?"},
+ {t:"Walk me through your perfect lazy Sunday."},
+ {t:"What's a little thing I do that you secretly love?"},
+ {t:"Okay, be honest. What did you think the first time you saw me?"},
+ {t:"Who in my circle you think you'd click with the most?"},
+ {t:"Where's a place you've been that you'd want to take me?"},
+ {t:"What's something you believe that you know most people would argue with you about?"},
+ {t:"What's something you're proud of this month?"},
+ {t:"Free weekend, money's not an issue. What are we doing?"},
+ {t:"What's a habit you got that you think I haven't noticed yet?"},
+ {t:"What would younger you think of your life right now?"},
+ {t:"What's the funniest thing that happened to you this week?"},
+ {t:"What's one thing you want us to do together this year?"},
+ {t:"What's that one movie you'll stop and watch every time it comes on?"},
+ {t:"What makes you feel the most loved? Words, touch, time, gifts, or somebody helping you out?"}
+],
+sweet:[
+ {t:"Tell {you} three things you love about them. No repeats from last time."},
+ {t:"Tell {you} your favorite memory of the two of you. Don't leave out the details."},
+ {t:"Send {you} a pic of something this week that made you think of them."},
+ {t:"Finish this out loud: “I knew I was falling for you when…”"},
+ {t:"Tell {you} what you'd make them for breakfast right now."},
+ {t:"Name a song that feels like {you}. Play 30 seconds of it."},
+ {t:"Tell {you} something they did lately that made your week easier."},
+ {t:"Say “I love you” to {you} in the most dramatic way you can."},
+ {t:"Tell {you} which goal of theirs you believe in most, and why."},
+ {t:"Record a voice note {you} can play when they miss you."},
+ {t:"Make up a brand new pet name for {you}, right now."},
+ {t:"Tell {you} about a time you were proud of them."},
+ {t:"Tell {you} what you pray for when you pray for them."},
+ {t:"Tell {you} what home feels like with them in it."},
+ {t:"Put the phone on the pillow next to you. Stay on the line with {you} in silence for one minute."},
+ {t:"Text {you} your favorite pic of the two of you and tell them why it's your favorite."},
+ {t:"Text {you} the exact moment today you wished they were there."},
+ {t:"Pick a star tonight. Tell {you} that one's yours together now."}
+],
+flirty:[
+ {t:"Tell {you} what you're wearing right now. Slowly."},
+ {t:"Tell {you} which outfit of theirs drives you crazy."},
+ {t:"Whisper something into the phone you'd only say to {you} up close."},
+ {t:"Rate {you}'s smile from 1 to “unfair.”"},
+ {t:"Tell {you} what you'd do if they walked in right now."},
+ {t:"Tell {you} exactly how you'd kiss them right now if you could."},
+ {t:"Compliment one part of {you}. Be specific."},
+ {t:"Send {you} a selfie right now. No retakes.", g:["photos"]},
+ {t:"Tell {you} the last time you thought about them and got flustered."},
+ {t:"Tell {you} the part of them you miss most, and why."},
+ {t:"Say {you}'s name the way you'd say it in bed.", g:["talk"]},
+ {t:"Tell {you} what you're craving. It's not food.", g:["talk"]},
+ {t:"Text {you} a pickup line while you're still on the phone."},
+ {t:"Tell {you} what you'd see right now if you could see them."},
+ {t:"Drop your voice low and keep it there for the rest of this round."},
+ {t:"Send {you} a text you'd be embarrassed to hear read out loud."},
+ {t:"Send {you} three emojis for what you want tonight. They have to guess."}
+],
+date:[
+ {t:"Start the same movie with {you} at the same second. Commentary allowed."},
+ {t:"Plan a whole date with {you} right now, start to finish."},
+ {t:"Build a playlist with {you}. Five songs each."},
+ {t:"Order {you} a dessert to the door. Surprise them."},
+ {t:"Make a dream-home board with {you}. Three picks each."},
+ {t:"Pick a trip you and {you} are taking someday, and find the hotel."},
+ {t:"Read {you} one page from a book you love."},
+ {t:"Teach {you} something you're good at in five minutes."},
+ {t:"Fall asleep on the phone with {you} tonight."},
+ {t:"Write {you} a short letter. Read it out loud."},
+ {t:"Play the same song as {you} at the same time and just listen. No talking."},
+ {t:"Play ten rounds of would-you-rather with {you} by text. Fast answers only."}
+],
+dark:[
+ {t:"Tell {you}, in detail, how you'd undress them.", g:["talk"]},
+ {t:"Tell {you} where you'd kiss first. Then second. Then third.", g:["talk"]},
+ {t:"Describe a perfect night with {you}, start to finish. Don't skip the good parts.", g:["talk"]},
+ {t:"Tell {you} a fantasy you haven't said out loud yet.", g:["fantasy"]},
+ {t:"For the next two minutes, {you} follows your instructions. Nothing else.", g:["control"]},
+ {t:"Tell {you} exactly how you want to be touched tonight.", g:["talk"]},
+ {t:"Tell {you} everything you want them to do to you.", g:["talk"]},
+ {t:"Touch yourself where you want {you} to touch you. Tell them about it.", g:["self","talk"]},
+ {t:"Tell {you} which sound they make that you can't stop thinking about.", g:["talk"]},
+ {t:"Pick a spot in your room. Tell {you} what you'd do with them there.", g:["talk"]},
+ {t:"Walk {you} through a whole night together, minute by minute. Go slow.", g:["talk"]},
+ {t:"Close your eyes. {you} describes touching you, and you can't talk till they finish.", g:["control"]},
+ {t:"Send {you} a photo they'll keep forever. Your call how much.", g:["photos"]},
+ {t:"Tell {you} what they did lately that made you want them.", g:["talk"]},
+ {t:"Let {you} hear your breathing. Show them what they do to you, no words.", g:["talk"]},
+ {t:"Tell {you} what your hands are doing right now, in real time.", g:["self"]},
+ {t:"Type out what you'd do to {you} first. Send it one line at a time and make them wait.", g:["talk"]},
+ {t:"Send {you} a pic of what you're wearing tonight. Let their imagination do the rest.", g:["photos"]},
+ {t:"Spank yourself where {you} says, as many times as they say. Count out loud.", g:["spank"]},
+ {t:"Tell {you} exactly where you'd spank them first, and how hard.", g:["spank","talk"]},
+ {t:"Put your plug in. It stays in until {you} says it can come out.", g:["plugs"]},
+ {t:"Describe how you'd use the whip on {you}. Slow.", g:["whip","talk"]},
+ {t:"Tell {you} exactly where you want their spit.", g:["spit","talk"]},
+ {t:"Pull your own hair the way you want {you} to pull it. Tell them how it feels.", g:["hair","self"]},
+ {t:"Call {you} the name you want to call them in bed. Say it slow.", g:["names","talk"]},
+ {t:"Tell {you} what a good job they did tonight. Be specific.", g:["praise"]},
+ {t:"Beg {you} for what you want. They decide if it was good enough.", g:["beg"]},
+ {t:"You're not allowed to finish until {you} says so. That's the rule for the rest of the night.", g:["denial"]},
+ {t:"Hand {you} the controls of your toy for the next five minutes.", g:["remote","toys"]},
+ {t:"Grab a toy. {you} tells you exactly how to use it, step by step.", g:["toys","control"]},
+ {t:"Tell {you} what you'd tie them up with, and what you'd do once they couldn't move.", g:["tied","talk"]},
+ {t:"Get yourself right to the edge while {you} listens. Stop when they say stop.", g:["denial","self"]},
+ {t:"Tell {you} the nastiest thing you want them to do to you. Don't clean it up.", g:["talk"]},
+ {t:"{you} picks a part of your body. Touch only there until they say switch.", g:["self","control"]}
+],
+music:[
+ {t:"Play {you} the song you'd want on if they walked in right now."},
+ {a:"ask", t:"What song has been on repeat for you lately?"},
+ {t:"Pick a song for you and {you} to slow dance to on the phone. Play it."},
+ {a:"ask", t:"What song makes you think of me?"},
+ {t:"Play {you} a song that matches your mood tonight. No explaining."},
+ {a:"ask", t:"If tonight had a soundtrack, what's the first song?"},
+ {t:"Add one song to the For the Lovers playlist right now. Tell {you} why."},
+ {a:"ask", t:"What's a love song you secretly know every word to?"},
+ {t:"Sing {you} one line of a love song. Any song. No backing out."},
+ {a:"ask", t:"What R&B song would you put on for us tonight?"},
+ {t:"Play the first 10 seconds of a slow jam. {you} has to guess it."},
+ {a:"ask", t:"What song would be our song right now?"}
+],
+wild:[
+ {t:"Order {you} food to their door. Surprise them with what."},
+ {t:"Mail {you} a handwritten letter this week."},
+ {t:"Let {you} rename themselves in your phone. You can't change it for a month."},
+ {t:"Set matching phone wallpapers with {you} tonight."},
+ {t:"Send something to {you}'s place: flowers, a candle, a snack."},
+ {t:"The next 3 cards count double. You and {you} both do every one."},
+ {t:"Free pass: you can skip any one card tonight."},
+ {t:"{you} picks your next dare. Anything from any deck."},
+ {t:"Record a voice note {you} can play on their next bad day."},
+ {t:"Send {you} a song every day this week. No explanation."}
+],
+brat:[
+ {r:"brat", t:"Refuse the next card. Make {tamer} convince you to do it."},
+ {r:"brat", t:"Ignore {tamer}'s next instruction on purpose. See what happens."},
+ {r:"brat", t:"Sigh so loud {tamer} can hear it, then dare him to do something about it."},
+ {r:"brat", t:"Talk back for the next two cards. Every smart remark costs you a penalty {tamer} picks."},
+ {r:"brat", t:"Do the opposite of what {tamer} asks next. Then take your consequence."},
+ {r:"brat", t:"Make {tamer} ask nicely three times before you do anything."},
+ {r:"brat", t:"Tease {tamer} for one full minute. He has to stay quiet the whole time.", g:["talk"]},
+ {r:"brat", t:"Pout until {tamer} gives you what you want. He decides if it works."},
+ {r:"brat", t:"Answer everything {tamer} says with “make me” until he earns it."},
+ {r:"brat", t:"Leave {tamer} on read for two minutes. Then reply like nothing happened."},
+ {r:"tamer", t:"{brat} has been mouthy. Pick her consequence and make her do it right now."},
+ {r:"tamer", t:"{brat} doesn't get to talk for the next two minutes. Only “yes sir.”", g:["control"]},
+ {r:"tamer", t:"Make {brat} say “please” properly before anyone draws another card."},
+ {r:"tamer", t:"Offer {brat} a deal: if she behaves for three cards, she picks what happens next."},
+ {r:"tamer", t:"From now on, every smart remark from {brat} gets a consequence you pick on the spot."},
+ {r:"tamer", t:"Tell {brat} exactly what she's going to do next, and how slowly.", g:["control","talk"]},
+ {r:"tamer", t:"Make {brat} apologize for her attitude. You decide if it counts."},
+ {r:"tamer", t:"{brat} is being a brat. Tell her, in your lowest voice, what happens if she keeps it up.", g:["talk"]},
+ {r:"tamer", t:"Text {brat} three rules for the rest of tonight. Every break costs her a dare you pick.", g:["control"]}
+],
+jyesno:[
+ {r:"tamer", lvl:1, t:"You think about me when you're laying down at night?"},
+ {r:"tamer", lvl:1, t:"Do you still get butterflies when I call?"},
+ {r:"tamer", lvl:1, t:"You like it when I compliment you out of nowhere?"},
+ {r:"tamer", lvl:1, t:"Is there something I do that turns you on and I don't even know it?"},
+ {r:"tamer", lvl:1, t:"You like it when I'm the one who starts it?"},
+ {r:"tamer", lvl:1, t:"What you think about my voice when I just woke up?"},
+ {r:"tamer", lvl:2, t:"Do you lowkey like it when I tell you what to do?", g:["control"]},
+ {r:"tamer", lvl:2, t:"Be honest… you be a brat on purpose just to see what I'll do?", g:["brat"]},
+ {r:"tamer", lvl:2, t:"Would you want me taking charge more?", g:["control"]},
+ {r:"tamer", lvl:2, t:"You like it when I take my time with you?"},
+ {r:"tamer", lvl:2, t:"Want me to just tell you exactly what I want?", g:["talk"]},
+ {r:"tamer", lvl:2, t:"Would you wear something if I picked it out for you?"},
+ {r:"tamer", lvl:2, t:"What happens when I say your name slow like that?", g:["talk"]},
+ {r:"tamer", lvl:3, t:"What if I made you wait for it?", g:["control"]},
+ {r:"tamer", lvl:3, t:"You like it when I get a little rough with you?", g:["rough"]},
+ {r:"tamer", lvl:3, t:"Would you let me tie you up?", g:["rough","control"]},
+ {r:"tamer", lvl:3, t:"What if I made you ask for it?", g:["control"]},
+ {r:"tamer", lvl:3, t:"How does it feel when I tell you you're a good girl?", g:["talk"]},
+ {r:"tamer", lvl:3, t:"Would you try a toy if I was the one in control of it?", g:["toys","control"]},
+ {r:"tamer", lvl:3, t:"What if I was the one who decided when you're done?", g:["control"]},
+ {r:"tamer", lvl:3, t:"Is there something you've wanted to ask me for but haven't?", g:["fantasy"]},
+ {r:"tamer", lvl:3, t:"If I said “tonight, you do what I say,” would you?", g:["control"]}
+]
+};
+const MODE = {};
+const CONNECT = {voice:"Voice call", text:"Texting"};
+function fits(m){ return m!=="C"; }
+const MISSION_MODE = {1:"C",2:"C",4:"V",7:"V",10:"C",11:"C"};
+/* Deep Talk, Yes or No and Yes Sir decks. r:"brat" = Her draws it and asks Him. lvl = earliest heat stage it can show up. */
+CARDS.deep = [{"t": "What happened while we weren't talking that you wish I was there for?"}, {"t": "What was the hardest year you went through that I don't even know about?"}, {"t": "Who held you down when I wasn't around?"}, {"t": "What did you do back then that you're proud of that I never got to see?"}, {"t": "When you thought about me back then, what was going through your head?"}, {"t": "Was there ever a time you almost hit me up and didn't? What stopped you?"}, {"t": "What did those years apart teach you about love?"}, {"t": "What's something about you now that the old me wouldn't even recognize?"}, {"t": "What do you need more of in your life right now?"}, {"t": "What's been on your mind lately that you haven't told anybody?"}, {"t": "What does a good day look like for you these days?"}, {"t": "What are you still working on in yourself?"}, {"t": "What's something you used to believe that you don't anymore?"}, {"t": "When do you feel the most like you?"}, {"t": "What's something people always get wrong about you?"}, {"t": "How do you know when somebody really loves you?"}, {"t": "When you're upset, you want space or you want me closer?"}, {"t": "What do I do that makes you feel safe with me?"}, {"t": "What's something from back in the day you want us to do different this time?"}, {"t": "Is there anything from back then that still sits with you sometimes?"}, {"t": "What could I do that would make you trust me even more?"}, {"t": "When you're going through it, how do you want me to show up for you?"}, {"t": "What's one thing I could do that would make you feel chosen?"}, {"t": "If we woke up living together tomorrow, what's our first Sunday looking like?"}, {"t": "If one of us got a big opportunity in another city, how would we figure it out?"}, {"t": "If money got tight, how would you want us to handle it?"}, {"t": "If we really didn't agree on something big, how would we work it out?"}, {"t": "If my girls needed a lot of my time, how would you want to fit into that?", "r": "brat"}, {"t": "Five years from now, what does a regular Tuesday look like for us?"}, {"t": "If something ever came up that you were scared to tell me, how could I make it easier for you to come to me?"}, {"t": "When we're old, what do you hope people say about us?"}, {"t": "What's one thing about us you never want to lose?"}, {"t": "What's a dream you'd want me to help you make happen?"}, {"t": "What does being committed mean to you at this point in your life?"}, {"t": "What's something we should figure out now before it ever turns into a problem?"}, {"t": "What's a tradition you want us to start, just us?"}, {"t": "What's one promise you know you can keep with me?"}, {"t": "What's one promise you want from me?"}];
+CARDS.yesno = [{"t": "Real question… do you think about me in the shower?", "r": "brat", "lvl": 1, "g": []}, {"t": "You ever replay one of our nights in your head while you're at work?", "r": "brat", "lvl": 1, "g": []}, {"t": "Do you like it when I'm the one who starts it?", "r": "brat", "lvl": 1, "g": []}, {"t": "What happens to you when I talk slow and low like this?", "r": "brat", "lvl": 1, "g": []}, {"t": "You ever had a dream about me you never told me about?", "r": "brat", "lvl": 1, "g": []}, {"t": "Be honest… you like it when I wear your clothes?", "r": "brat", "lvl": 1, "g": []}, {"t": "Is there an outfit of mine you secretly want me to wear more?", "r": "brat", "lvl": 1, "g": []}, {"t": "Be honest… do you like it when I take over a little?", "r": "brat", "lvl": 2, "g": ["control"]}, {"t": "You like it when I'm being a brat and you gotta put me in my place?", "r": "brat", "lvl": 2, "g": ["brat"]}, {"t": "Do you want me to just tell you what I want, out loud?", "r": "brat", "lvl": 2, "g": ["talk"]}, {"t": "You like being teased till you can't take it no more?", "r": "brat", "lvl": 2, "g": []}, {"t": "Have you ever thought about role play with me?", "r": "brat", "lvl": 2, "g": ["fantasy"]}, {"t": "Do you like it when I get loud?", "r": "brat", "lvl": 2, "g": ["talk"]}, {"t": "Would you let me blindfold you?", "r": "brat", "lvl": 2, "g": ["control"]}, {"t": "Tell the truth… you like it when I boss you around a little?", "r": "brat", "lvl": 2, "g": ["control"]}, {"t": "What does it do to you when I say your name in the moment?", "r": "brat", "lvl": 2, "g": ["talk"]}, {"t": "If I sent you a pic out of nowhere, would you want that?", "r": "brat", "lvl": 2, "g": ["photos"]}, {"t": "Do you like your hair getting pulled?", "r": "brat", "lvl": 3, "g": ["rough"]}, {"t": "What about pulling mine?", "r": "brat", "lvl": 3, "g": ["rough"]}, {"t": "Okay… spanking. You want to give it, get it, or both?", "r": "brat", "lvl": 3, "g": ["rough"]}, {"t": "Okay, random question… have you ever thought about being tied up?", "r": "brat", "lvl": 3, "g": ["rough", "control"]}, {"t": "Would you want to tie me up?", "r": "brat", "lvl": 3, "g": ["rough", "control"]}, {"t": "You like it when I'm on top?", "r": "brat", "lvl": 3, "g": []}, {"t": "Have you ever tried edging? Stopping right before and starting over?", "r": "brat", "lvl": 3, "g": ["control"]}, {"t": "Would you be down to try a toy together?", "r": "brat", "lvl": 3, "g": ["toys"]}, {"t": "Is there something you've wanted to try with me but never asked?", "r": "brat", "lvl": 3, "g": ["fantasy"]}, {"t": "You like it when I tell you what I'm doing to myself while we're on the phone?", "r": "brat", "lvl": 3, "g": ["self", "talk"]}, {"t": "How would you feel about me waking you up in a freaky way?", "r": "brat", "lvl": 3, "g": []}, {"t": "Is there a spot on your body nobody ever gave enough attention to?", "r": "brat", "lvl": 3, "g": ["talk"]}, {"t": "If I said “tonight, anything you want,” you already know what you'd pick?", "r": "brat", "lvl": 3, "g": ["fantasy"]}];
+CARDS.yessir = [{"t": "You like it when I listen to you, huh?", "r": "brat", "lvl": 1, "g": []}, {"t": "Do you like being the one who decides what we do?", "r": "brat", "lvl": 1, "g": []}, {"t": "What does it do to you when I say “yes sir,” even playing?", "r": "brat", "lvl": 1, "g": []}, {"t": "You like it when I get a little mouthy with you?", "r": "brat", "lvl": 1, "g": []}, {"t": "Can you tell when I'm trying to get a reaction out of you?", "r": "brat", "lvl": 1, "g": []}, {"t": "You like being the one I come to when I need something?", "r": "brat", "lvl": 1, "g": []}, {"t": "Be honest… you like it when I'm a brat on purpose?", "r": "brat", "lvl": 2, "g": []}, {"t": "Would you want to be the one who puts me in my place?", "r": "brat", "lvl": 2, "g": []}, {"t": "How does it feel when I ask you for permission?", "r": "brat", "lvl": 2, "g": ["control"]}, {"t": "Tell the truth… you like knowing you can get me to behave, don't you?", "r": "brat", "lvl": 2, "g": []}, {"t": "If you gave me one rule for tonight, what would it be?", "r": "brat", "lvl": 2, "g": ["control"]}, {"t": "And if I break it… what happens?", "r": "brat", "lvl": 2, "g": ["control"]}, {"t": "Would you want to tell me exactly what to do, step by step?", "r": "brat", "lvl": 3, "g": ["control", "talk"]}, {"t": "What if I had to wait for your permission before I did anything?", "r": "brat", "lvl": 3, "g": ["control"]}, {"t": "What would you do if I started begging?", "r": "brat", "lvl": 3, "g": ["control"]}, {"t": "What would you want me to call you when you're in charge?", "r": "brat", "lvl": 3, "g": []}, {"t": "What if I wasn't allowed to talk until you said so?", "r": "brat", "lvl": 3, "g": ["control"]}, {"t": "Do you want to be the one who decides when I'm done?", "r": "brat", "lvl": 3, "g": ["control"]}, {"t": "Did you like being in charge tonight?", "r": "brat", "lvl": 3, "g": []}, {"t": "Want me to keep being a brat so you gotta keep taming me?", "r": "brat", "lvl": 3, "g": []}, {"t": "Should we make this our thing?", "r": "brat", "lvl": 3, "g": []}];
+const MISSIONS = [
+"Get them to say “I miss you” without asking.",
+"Make them blush on camera.",
+"Get them to give you a tour of their room.",
+"Sneak a compliment about their hands into conversation.",
+"Make them laugh 3 times before the next card.",
+"Get them to suggest a future date idea.",
+"Use the word “forever” casually, twice.",
+"Get them to sing a line of a song.",
+"Get them to say your name twice.",
+"Get the full story of their day without asking “how was your day.”",
+"Get a kiss blown at the camera.",
+"Get them to change their lighting."
+];
+/* Boundary topics. A card tagged with a topic only appears when BOTH of you said Yes or Maybe to it. */
+/* Boundaries, grouped. The first eight keys are the originals (talk, fantasy, self, control, photos, brat, rough, toys) and keep their answers. */
+const TOPIC_GROUPS = [
+  {title:"Talk", items:[
+    ["talk","Explicit talk","Saying exactly what you want, out loud"],
+    ["fantasy","Sharing fantasies","Things you've imagined but never said"],
+    ["praise","Praise","Good girl, good boy, being told you did good"],
+    ["names","Name-calling","Dirty names in the moment"],
+    ["photos","Sending photos","Pictures they keep on their phone"],
+    ["voice","Voice notes","Something recorded that they can play back"]]},
+  {title:"Power", items:[
+    ["control","Giving and following instructions","One leads, one follows"],
+    ["brat","Brat & tamer play","One pushes, one tames"],
+    ["beg","Begging and asking permission","Not doing anything until you're told"],
+    ["denial","Edging and waiting","Stopping right before, being made to wait"]]},
+  {title:"Rough play", items:[
+    ["rough","Rough play in general","Being a little rough with each other"],
+    ["spank","Spanking","Hands, giving or getting"],
+    ["whip","Whips and floggers",""],
+    ["hair","Hair pulling",""],
+    ["tied","Being tied up or held down",""],
+    ["spit","Spit",""]]},
+  {title:"Toys and touch", items:[
+    ["toys","Toys","Using toys together"],
+    ["plugs","Plugs",""],
+    ["remote","Remote-control toys","The other person runs it from their phone"],
+    ["self","Touching yourself","While the other listens"]]},
+  {title:"Giving and getting", pairs:[
+    ["oral","Oral"],
+    ["rim","Eating ass"],
+    ["anal","Anal"]]},
+  {title:"Body", parts:["Lips","Neck","Ears","Chest","Nipples","Back","Stomach","Hips","Inner thighs","Butt","Hands","Feet"]}
+];
+const TOPICS = Object.fromEntries(TOPIC_GROUPS.flatMap(g=>(g.items||[]).map(([k,name,sub])=>[k,{name,sub}])));
+/* Extra boundary tags for cards that touch a specific item. */
+const TAG_EXTRA = {"yesno-17":["hair"],"yesno-18":["hair"],"yesno-19":["spank"],"yesno-20":["tied"],"yesno-21":["tied"],"yesno-23":["denial"],
+  "jyesno-13":["denial"],"jyesno-15":["tied"],"jyesno-16":["beg"],"jyesno-17":["praise"],"yessir-8":["beg"],"yessir-13":["beg"],"yessir-14":["beg"]};
+/* The night warms up on its own: soft first, spicier as the cards add up. */
+const HEAT = [
+  {name:"Slow Jams",        sub:"Getting close",          w:{music:30,know:25,sweet:25,date:20}},
+  {name:"Catching Feelings",sub:"Flirting starts",        w:{know:8,sweet:12,date:8,wild:6,deep:14,flirty:20,yesno:10,jyesno:10,yessir:12}},
+  {name:"Late Night",       sub:"Turning it up",          w:{deep:6,flirty:22,dark:22,yesno:14,jyesno:14,yessir:10,brat:10,wild:2}},
+  {name:"No Skips",         sub:"Grown and spicy",        w:{flirty:10,dark:40,yesno:14,jyesno:14,yessir:10,brat:14,wild:2}}
+];
+const DEFAULTS = {
+  settings:{names:{a:"Her",b:"Him"}, custom:[], banned:[], brat:"a", safeword:"", paused:["brat"], pace:[3,3,3]},
+  live:{card:null, by:null, n:0, night:"", history:[], reveal:null, cool:"", swNight:"", ys:0},
+  nights:{dates:[]},
+  memories:{items:[]},
+  boundaries:{a:{}, b:{}, custom:[]}
+};
+
+const S = JSON.parse(JSON.stringify(DEFAULTS));
+let tab = "home", db = null, synced = false, lastCardKey = null, myMission = null;
+function lsGet(k,d){try{const v=localStorage.getItem(k);return v==null?d:JSON.parse(v)}catch(e){return d}}
+function lsSet(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}}
+let me = lsGet("ah_me", null);
+myMission = lsGet("ah_mission", null);
+
+/* ---------- data ---------- */
+/* Shared game state lives in Supabase. The private link carries the room id and its secret code;
+   the database only answers when both match. Each phone checks for changes every few seconds. */
+const SB_URL = "https://dmkcporakdyucsjrxmfh.supabase.co", SB_KEY = "sb_publishable_EgTk4PH80g7QzmpaeC17lQ_2W0uYfcS";
+let room = null, connOK = true;
+const queues = {}, versions = {}, pending = {};
+function readRoom(){
+  const m = (location.hash||"").match(/r=([0-9a-f-]{36})\.([A-Za-z0-9_-]{8,})/);
+  if(m){ room = {id:m[1], secret:m[2]}; lsSet("ftl_room", room); try{ history.replaceState(null, "", location.pathname); }catch(e){} }
+  else room = lsGet("ftl_room", null);
+}
+async function rpc(fn, args){
+  const r = await fetch(SB_URL+"/rest/v1/rpc/"+fn, {method:"POST", headers:{apikey:SB_KEY, "Content-Type":"application/json"}, body:JSON.stringify(args)});
+  if(!r.ok){ const e = new Error(await r.text()); e.status = r.status; throw e; }
+  return r.json();
+}
+function online(ok){ if(ok!==connOK){ connOK = ok; safeRender(); } }
+function save(name){
+  const body = JSON.parse(JSON.stringify(S[name]));
+  lsSet("ah_"+name, body);
+  if(!room) return Promise.resolve();
+  pending[name] = (pending[name]||0) + 1;
+  queues[name] = (queues[name]||Promise.resolve())
+    .then(()=>rpc("ftl_set", {p_room:room.id, p_secret:room.secret, p_key:name, p_data:body}))
+    .then(v=>{ versions[name] = v; online(true); })
+    .catch(()=>{ online(false); toast("Couldn't save. Check your connection."); })
+    .finally(()=>{ pending[name]--; });
+  return queues[name];
+}
+async function pull(){
+  if(!room) return;
+  try{
+    const all = await rpc("ftl_get", {p_room:room.id, p_secret:room.secret});
+    online(true); let changed = false;
+    for(const k of Object.keys(DEFAULTS)){
+      const d = all[k]; if(!d || pending[k] || versions[k]===d.v) continue;
+      versions[k] = d.v; S[k] = Object.assign({}, JSON.parse(JSON.stringify(DEFAULTS[k])), d.data); lsSet("ah_"+k, S[k]); changed = true;
+    }
+    if(!synced || changed){ synced = true; safeRender(); }
+  }catch(e){
+    if(e.status===403 || e.status===400){ lsSet("ftl_room", null); room = null; render(); }
+    else online(false);
+  }
+}
+/* Don't redraw while someone is typing or mid-swipe. */
+function safeRender(){
+  const a = document.activeElement;
+  if(a && /^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName)) return;
+  if(document.querySelector(".card.dragging")) return;
+  render();
+}
+function loadLocal(){ for(const k of Object.keys(DEFAULTS)){ const v=lsGet("ah_"+k,null); if(v) S[k]=Object.assign({},DEFAULTS[k],v);} }
+function connect(){
+  readRoom(); render();
+  if(!room) return;
+  pull();
+  setInterval(()=>{ if(document.visibilityState==="visible") pull(); }, 2500);
+  document.addEventListener("visibilitychange", ()=>{ if(document.visibilityState==="visible") pull(); });
+}
+
+/* ---------- helpers ---------- */
+const $ = (t,a={},...kids)=>{const e=document.createElement(t);for(const[k,v] of Object.entries(a)){if(k==="class")e.className=v;else if(k==="text")e.textContent=v;else if(k.startsWith("on"))e.addEventListener(k.slice(2),v);else if(k==="style")e.setAttribute("style",v);else if(v!==false&&v!=null)e.setAttribute(k,v===true?"":v)}for(const c of kids.flat()){if(c==null)continue;e.append(c.nodeType?c:document.createTextNode(c))}return e};
+const nm = k => (S.settings.names && S.settings.names[k]) || (k==="a"?"Her":"Him");
+const other = k => k==="a"?"b":"a";
+const pad = n => String(n).padStart(2,"0");
+const ymd = d => d.getFullYear()+"-"+pad(d.getMonth()+1)+"-"+pad(d.getDate());
+const mkey = d => d.getFullYear()+"-"+pad(d.getMonth()+1);
+function toast(msg){const t=document.getElementById("toast");t.textContent=msg;t.hidden=false;clearTimeout(toast.t);toast.t=setTimeout(()=>t.hidden=true,2400)}
+function allCards(deck){
+  const kind = ASK_DECKS.includes(deck) ? "ask" : "do";
+  const base = CARDS[deck].map((x,i)=> typeof x==="string" ? {id:deck+"-"+i,deck,text:x,kind,lv:lvOf(deck,i),tags:[]}
+    : {id:deck+"-"+i,deck,text:x.t,kind:x.a||kind,role:x.r,lvl:x.lvl||0,lv:lvOf(deck,i,x),m:x.m,tags:((deck==="brat"||deck==="yessir")?["brat"]:[]).concat(x.g||[]).concat(TAG_EXTRA[deck+"-"+i]||[]).filter((t,j,a)=>a.indexOf(t)===j)});
+  const extra = (S.settings.custom||[]).filter(c=>c.deck===deck).map(c=>({id:c.id,deck,text:c.text,kind,custom:true,lv:LV_DECK[deck]||[0,1,2,3],tags:deck==="dark"?["talk"]:deck==="brat"?["brat"]:[]}));
+  return base.concat(extra).filter(c=>c.m!=="C");
+}
+function answer(who,t){ return ((S.boundaries||{})[who]||{})[t] || ""; }
+function allowed(c){ return c.tags.every(t=>answer("a",t)!=="no" && answer("b",t)!=="no"); }
+function needsCheckIn(c){ return c.tags.some(t=>answer("a",t)==="maybe"||answer("b",t)==="maybe"); }
+function playable(deck){ const banned=new Set(S.settings.banned||[]); return allCards(deck).filter(c=>!banned.has(c.id) && allowed(c)); }
+function boundariesDone(who){ return Object.keys(TOPICS).every(t=>answer(who,t)); }
+function nightN(){ return S.live.night===ymd(new Date()) ? (S.live.n||0) : 0; }
+/* How many cards each of the first three levels lasts. The last level runs the rest of the night. */
+function paceLens(){ const p=S.settings.pace; return [0,1,2].map(i=>{ const v=Array.isArray(p)?+p[i]:3; return v>=1&&v<=20?Math.round(v):3; }); }
+function heatFor(n){ const L=paceLens(); let end=0; for(let i=0;i<3;i++){ end+=L[i]; if(n<=end) return HEAT[i]; } return HEAT[3]; }
+function levelsFor(deck){ const ds = deck==="yesno" ? ["yesno","jyesno"] : [deck]; return HEAT.filter((lv,i)=>ds.some(d=>(lv.w[d]||0)>0 && allCards(d).some(c=>c.lv.includes(i)))).map(lv=>lv.name); }
+
+function monthCount(){ const k=mkey(new Date()); return (S.nights.dates||[]).filter(d=>d.slice(0,7)===k).length; }
+
+/* ---------- actions ---------- */
+function logNight(){
+  const today = ymd(new Date());
+  if(!(S.nights.dates||[]).includes(today)){ S.nights.dates=(S.nights.dates||[]).concat(today).slice(-3000); save("nights"); }
+}
+const bratKey = () => S.settings.brat||"a";
+/* Cards say they/them for the other person; swap in him/her. Her (a) is she, Him (b) is he. */
+function pron(t, who){
+  const P = who==="a" ? {he:"she",him:"her",his:"her",hers:"hers",self:"herself"} : {he:"he",him:"him",his:"his",hers:"his",self:"himself"};
+  return t.replace(/\bthey miss\b/g,P.he+" misses").replace(/\bthey were\b/g,P.he+" was").replace(/\bthey make\b/g,P.he+" makes")
+    .replace(/\bthey finish\b/g,P.he+" finishes").replace(/\bwhat they do\b/g,"what "+P.he+" does").replace(/\bthey'll\b/g,P.he+"'ll")
+    .replace(/\bthemselves\b/g,P.self).replace(/\btheirs\b/g,P.hers).replace(/\btheir\b/g,P.his).replace(/\bthem\b/g,P.him).replace(/\bthey\b/g,P.he);
+}
+function fill(t, drawer){ drawer=drawer||me||"a"; if(t.includes("{you}")) t=pron(t, other(drawer)); return t.replace(/\{brat\}/g,nm(bratKey())).replace(/\{tamer\}/g,nm(other(bratKey()))).replace(/\{you\}/g,nm(other(drawer))).replace(/^(.)/,c=>c.toUpperCase()); }
+function ysTonight(){ return S.live.night===ymd(new Date()) ? (S.live.ys||0) : 0; }
+function cooled(){ return S.live.cool===ymd(new Date()); }
+function pickCard(n, excludeId, drawer, sameDeck){
+  drawer = drawer || me || "a";
+  const role = drawer===bratKey() ? "brat" : "tamer";
+  const recent = new Set((S.live.history||[]).concat(excludeId||[]));
+  const hi = cooled() ? 0 : HEAT.indexOf(heatFor(Math.max(1,n)));
+  /* Tamer cards wait until Him has answered two Yes Sir questions tonight, so he's eased in first. */
+  const tamerOpen = ysTonight() >= 2;
+  const usable = k => playable(k).filter(c=>(!c.role || c.role===role) && fits(c.m) && c.lv.includes(hi) && !(c.deck==="brat" && c.role==="tamer" && !tamerOpen));
+  const w = Object.assign({}, cooled() ? {know:40,sweet:40,date:20} : heatFor(n).w);
+  const paused = S.settings.paused||[];
+  for(const k of Object.keys(w)) if(paused.includes(k) || !usable(k).length) w[k]=0;
+  let total = Object.values(w).reduce((a,b)=>a+b,0);
+  if(!total){ for(const k of ["know","sweet","date"]) w[k]=1; total=3; }
+  let r = Math.random()*total, deck="know";
+  for(const [k,v] of Object.entries(w)){ if((r-=v)<0){ deck=k; break; } }
+  /* Passing keeps you in the same category when it still has a card to give. */
+  if(sameDeck && !(S.settings.paused||[]).includes(sameDeck) && usable(sameDeck).filter(c=>c.id!==excludeId).length) deck = sameDeck;
+  let pool = usable(deck).filter(c=>!recent.has(c.id)); if(!pool.length) pool = usable(deck);
+  if(!pool.length) pool = allCards("sweet");
+  const c = pool[Math.floor(Math.random()*pool.length)];
+  return {id:c.id, deck:c.deck, kind:c.kind, text:fill(c.text, drawer), checkIn:needsCheckIn(c)};
+}
+function draw(forWho){
+  if(!me){ askWho(); return; }
+  const who = typeof forWho==="string" ? forWho : me;
+  const today = ymd(new Date()); const n = nightN()+1;
+  const card = pickCard(n, null, who);
+  const fresh = S.live.night!==today;
+  const swNight = fresh ? "" : S.live.swNight;
+  if((card.deck==="brat"||card.deck==="yessir") && swNight!==today) card.swCheck = true;
+  const ys = (fresh ? 0 : (S.live.ys||0)) + (card.deck==="yessir" ? 1 : 0);
+  S.live = Object.assign({}, S.live, {card, by:who, n, night:today, ys, swNight: card.swCheck ? today : swNight, history:(S.live.history||[]).concat(card.id).slice(-60)});
+  logNight(); save("live"); render();
+}
+function skip(){
+  if(!S.live.card) return;
+  const card = pickCard(nightN(), S.live.card.id, S.live.by, S.live.card.deck);
+  const today = ymd(new Date());
+  if((card.deck==="brat"||card.deck==="yessir") && (S.live.swNight!==today || S.live.card.swCheck)) card.swCheck = true;
+  S.live = Object.assign({}, S.live, {card, ys:(S.live.ys||0)+(card.deck==="yessir"?1:0), swNight: card.swCheck ? today : S.live.swNight, history:(S.live.history||[]).concat(card.id).slice(-60)});
+  save("live"); render();
+}
+function banCard(){
+  const c=S.live.card; if(!c || c.safeword) return;
+  S.settings = Object.assign({}, S.settings, {banned:(S.settings.banned||[]).concat(c.id)});
+  save("settings"); toast("Taken out of the deck. You can bring it back in Settings.");
+  skip();
+}
+function markDone(){
+  const c=S.live.card; if(!c || c.done) return;
+  const today=ymd(new Date());
+  /* Done hands the turn to your partner. Draw your next card when they're finished. */
+  S.live = Object.assign({}, S.live, {card:Object.assign({}, c, {done:true}), doneNight:today, doneCount:(S.live.doneNight===today?(S.live.doneCount||0):0)+1});
+  save("live"); render();
+}
+function safeword(){
+  S.live = Object.assign({}, S.live, {cool: ymd(new Date())}); save("live"); render();
+}
+function reheat(){ S.live = Object.assign({}, S.live, {cool:""}); save("live"); render(); }
+function keepCard(){
+  const c=S.live.card; if(!c) return;
+  if((S.memories.items||[]).some(m=>m.id===c.id && m.date===ymd(new Date()))){ toast("Already saved tonight."); return; }
+  S.memories.items=[{id:c.id,deck:c.deck,text:c.text,by:S.live.by,date:ymd(new Date())}].concat(S.memories.items||[]).slice(0,300);
+  save("memories"); toast("Saved to your memories.");
+}
+function setMode(m){ S.live = Object.assign({}, S.live, {mode:m}); save("live"); render(); }
+function modePicker(){
+  const cur=S.live.mode==="text"?"text":"voice";
+  return $("div",{class:"connect"},$("span",{class:"eyebrow",text:"How are we connected tonight?"}),
+    $("div",{class:"seg wide",role:"group","aria-label":"How you're connected"}, Object.entries(CONNECT).map(([k,l])=>
+      $("button",{"aria-pressed":String(cur===k),onclick:()=>setMode(k),text:l}))));
+}
+function newMission(){ const ok=MISSIONS.filter((_,i)=>fits(MISSION_MODE[i], S.live.mode||"voice")); myMission = ok[Math.floor(Math.random()*ok.length)]; lsSet("ah_mission",myMission); render(); }
+function revealMission(done){
+  if(!myMission||!me) return;
+  S.live = Object.assign({}, S.live, {reveal:{text:myMission, by:me, done, at:Date.now()}});
+  myMission=null; lsSet("ah_mission",null); save("live"); render();
+}
+
+/* ---------- views ---------- */
+const ICON = {
+  home:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M4 11l8-7 8 7v9a1 1 0 0 1-1 1h-4v-6h-6v6H5a1 1 0 0 1-1-1z"/></svg>',
+  play:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><rect x="5" y="3" width="11" height="16" rx="2"/><path d="M9 7l10 2-3 13-8-2"/></svg>',
+  memories:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M12 20s-7-4.4-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 10c0 5.6-7 10-7 10z"/></svg>',
+  limits:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M12 3l7 3v5c0 4.5-3 8.2-7 10-4-1.8-7-5.5-7-10V6z"/><path d="M9 12l2 2 4-4"/></svg>',
+  settings:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M4 6h10M18 6h2M4 12h4M12 12h8M4 18h12M20 18h0"/><circle cx="16" cy="6" r="2"/><circle cx="10" cy="12" r="2"/><circle cx="18" cy="18" r="2"/></svg>'
+};
+function renderTabs(){
+  const t=document.getElementById("tabs"); t.innerHTML="";
+  [["home","Home"],["limits","Boundaries"],["play","Play"],["memories","Memories"],["settings","Settings"]].forEach(([k,l])=>{
+    const b=$("button",{class:k==="play"?"tab-play":false,"aria-current":tab===k?"page":false,onclick:()=>{tab=k;render();window.scrollTo(0,0)}}); b.innerHTML=ICON[k]; b.append(l); t.append(b);
+  });
+}
+const LOGO_SVG = `<svg viewBox="0 0 200 200" role="img" aria-label="Y and J"><g transform="rotate(-8 100 100)">
+<circle cx="100" cy="100" r="96" fill="#0d1d16" stroke="#f4a6bf" stroke-width="6"/>
+<text x="74" y="138" text-anchor="middle" font-family="Anton, Impact, sans-serif" font-size="104" fill="#f4a6bf">Y</text>
+<text x="128" y="138" text-anchor="middle" font-family="Anton, Impact, sans-serif" font-size="104" fill="none" stroke="#f9cdd8" stroke-width="3">J</text>
+<text x="101" y="120" text-anchor="middle" font-family="Pinyon Script, cursive" font-size="66" fill="#fdf3f5" stroke="#0d1d16" stroke-width="5" paint-order="stroke">&amp;</text>
+</g></svg>`;
+function header(){
+  const logo=$("div",{class:"logo"}); logo.innerHTML=LOGO_SVG;
+  return $("div",{class:"top"},
+    $("div",{class:"brand"}, logo, $("div",{}, $("div",{class:"eyebrow",text:connOK?"For the Lovers":"For the Lovers \u00b7 reconnecting"}),
+      $("h1",{}, nm("a")+" ", $("em",{text:"&"})," "+nm("b")))),
+    me ? $("button",{class:"who",onclick:askWho,text:"I'm "+nm(me)}) : $("button",{class:"who",onclick:askWho,text:"Who are you?"})
+  );
+}
+function heatMeter(){
+  const n=nightN(), h=heatFor(Math.max(1,n)), idx=HEAT.indexOf(h);
+  const segs=$("div",{class:"heat","aria-hidden":"true"}, HEAT.map((_,i)=>$("i",{class:i<=idx&&n>0?"lit":""})));
+  return $("div",{class:"heatwrap"},
+    $("div",{class:"row",style:"justify-content:space-between"},$("span",{class:"eyebrow",text:"Tonight's heat"}),$("span",{style:"font-size:13px;color:var(--rose)",text:cooled()?"Cooled down":n?h.name:"Starts soft"})),
+    cooled() ? $("div",{class:"cool"},$("span",{text:"Safeword used. Only sweet cards for the rest of tonight."}),$("button",{class:"btn small ghost",onclick:reheat,text:"We're good, turn it back up"})) : segs);
+}
+const openGroups = new Set(["Talk"]);
+function groupBox(title, ...kids){
+  const d=$("details",{class:"form bgroup",open:openGroups.has(title)}, ...kids);
+  d.addEventListener("toggle",()=>{ d.open ? openGroups.add(title) : openGroups.delete(title); });
+  return d;
+}
+function setAnswer(key, v){
+  const b=JSON.parse(JSON.stringify(S.boundaries||{a:{},b:{},custom:[]}));
+  b[me]=Object.assign({},b[me]||{},{[key]:v}); S.boundaries=b; save("boundaries"); render();
+}
+const ANS = {yes:"Yes", maybe:"Maybe", no:"No", love:"Love it"};
+function answerRow(key, label, sub, opts){
+  opts = opts || [["yes","Yes"],["maybe","Maybe"],["no","No"]];
+  const cur=answer(me,key), theirs=answer(other(me),key);
+  const dotTitle = nm(other(me))+": "+(theirs ? ANS[theirs] : "not answered yet");
+  const seg=$("div",{class:"seg tight",role:"group","aria-label":label}, opts.map(([v,t])=>$("button",{class:"seg-"+(v==="love"?"yes":v),"aria-pressed":String(cur===v),onclick:()=>setAnswer(key,v),text:t})));
+  return $("div",{class:"brow"},
+    $("div",{class:"bname"},
+      $("div",{class:"bline1"},$("span",{class:"pdot "+(theirs?"pd-"+(theirs==="love"?"yes":theirs):"pd-none"),title:dotTitle,"aria-label":dotTitle,role:"img"}),$("span",{style:"font-weight:500",text:label})),
+      sub?$("div",{class:"muted",style:"font-size:12px;margin-left:18px",text:sub}):null),
+    seg);
+}
+function allItems(){
+  const out=[];
+  for(const g of TOPIC_GROUPS){
+    (g.items||[]).forEach(([k,n])=>out.push([k,n]));
+    (g.pairs||[]).forEach(([k,n])=>{ out.push([k+":give",n+" (giving)"]); out.push([k+":get",n+" (getting)"]); });
+    (g.parts||[]).forEach(p=>out.push(["body:"+p,p]));
+  }
+  ((S.boundaries||{}).custom||[]).forEach(c=>out.push(["c:"+c.id,c.name]));
+  return out;
+}function viewBoundaries(){
+  if(wiz!==null && me) return viewWizard();
+  const out=[header(),$("h2",{style:"font-size:26px",text:"Boundaries"})];
+  if(!me){ out.push($("button",{class:"btn primary",onclick:askWho,text:"Tell us who you are to answer"})); return out; }
+  const allI=allItems(), answeredN=allI.filter(([k])=>answer(me,k)).length;
+  out.push($("div",{class:"form wpromo"},
+    $("h3",{style:"font-size:20px",text: answeredN===0 ? "Not sure where to start?" : answeredN<allI.length ? "Pick up where you left off" : "Want to go through it again?"}),
+    $("p",{class:"muted",style:"margin:0;font-size:13px",text: answeredN===0 ? "The walkthrough asks one question at a time and explains each one in plain words, so you know exactly what you're saying yes or no to." : `You've answered ${answeredN} of ${allI.length}. The walkthrough takes you to the ones you haven't answered yet.`}),
+    $("button",{class:"btn primary",style:"align-self:flex-start",onclick:wizStart,text: answeredN===0 ? "Start the walkthrough" : answeredN<allI.length ? "Continue the walkthrough" : "Start the walkthrough"})));
+  /* Safeword first. */
+  const swIn=$("input",{id:"sw",value:S.settings.safeword||"",placeholder:"Something you'd never say by accident",maxlength:"40"});
+  swIn.addEventListener("change",()=>{ S.settings=Object.assign({},S.settings,{safeword:swIn.value.trim().slice(0,40)}); save("settings"); toast("Safeword saved."); });
+  out.push($("div",{class:"form"},
+    $("h3",{style:"font-size:20px",text:"Safeword"}),
+    $("div",{class:"field"},$("label",{for:"sw",text:"If either of you says it, everything stops"}),swIn),
+    $("p",{class:"muted",style:"margin:0;font-size:12px",text:"It comes up before the first brat card each night. The Safeword button on Play also cools the night down to sweet cards."})));
+  /* Where you line up. */
+  const items=allItems(), A=k=>answer(me,k), T=k=>answer(other(me),k);
+  const both=items.filter(([k])=>["yes","love"].includes(A(k)) && ["yes","love"].includes(T(k)));
+  const talk=items.filter(([k])=>A(k)!=="no" && T(k)!=="no" && (A(k)==="maybe"||T(k)==="maybe"));
+  const off=items.filter(([k])=>A(k)==="no"||T(k)==="no");
+  const mine=items.filter(([k])=>A(k)).length, theirs=items.filter(([k])=>T(k)).length;
+  const chipList=(list,cls,empty)=>list.length?$("div",{class:"chips"},list.map(([k,n])=>$("span",{class:"chip "+cls,text:n}))):$("span",{class:"muted",style:"font-size:13px",text:empty});
+  out.push($("div",{class:"form"},
+    $("h3",{style:"font-size:20px",text:"Where you two line up"}),
+    $("div",{class:"muted",style:"font-size:13px",text:`You've answered ${mine} of ${items.length}. ${nm(other(me))} has answered ${theirs}.`}),
+    $("div",{class:"sumgrp"},$("b",{text:"You're both into"}),chipList(both,"c-yes","Nothing yet. Answer below and matches show up here.")),
+    $("div",{class:"sumgrp"},$("b",{text:"Talk about it first"}),chipList(talk,"c-maybe","Nothing marked Maybe.")),
+    $("div",{class:"sumgrp"},$("b",{text:"Off limits for one of you"}),chipList(off,"c-no","Nothing off limits."))));
+  out.push($("div",{class:"legend2"},
+    $("span",{},$("span",{class:"pdot pd-yes"})," "+nm(other(me))+" said Yes"),
+    $("span",{},$("span",{class:"pdot pd-maybe"})," Maybe"),
+    $("span",{},$("span",{class:"pdot pd-no"})," No"),
+    $("span",{},$("span",{class:"pdot pd-none"})," Not yet")));
+  for(const g of TOPIC_GROUPS){
+    const rows=[]; const keys=[];
+    if(g.items) for(const [k,name,sub] of g.items){ rows.push(answerRow(k,name,sub)); keys.push(k); }
+    if(g.pairs){
+      rows.push($("p",{class:"muted",style:"margin:0;font-size:12px",text:"Giving and getting are separate. You can be into one and not the other."}));
+      for(const [k,name] of g.pairs){ rows.push(answerRow(k+":give",name+" (giving)","")); rows.push(answerRow(k+":get",name+" (getting)","")); keys.push(k+":give",k+":get"); }
+    }
+    if(g.parts) for(const part of g.parts){ rows.push(answerRow("body:"+part,part,"",[["love","Love it"],["maybe","Maybe"],["no","No"]])); keys.push("body:"+part); }
+    const done=keys.filter(k=>answer(me,k)).length;
+    out.push(groupBox(g.title,
+      $("summary",{},$("span",{style:"font-family:var(--display);font-size:20px",text:g.title}),$("span",{class:"prog"},$("i",{style:`width:${Math.round(done/keys.length*100)}%`})),$("span",{class:"muted",style:"font-size:12px;white-space:nowrap",text:`${done}/${keys.length}`})),
+      ...rows));
+  }
+  const custom=((S.boundaries||{}).custom||[]);
+  const addIn=$("input",{id:"newTopic",placeholder:"Something specific to you two",maxlength:"60"});
+  out.push(groupBox("Add your own",
+    $("summary",{},$("span",{style:"font-family:var(--display);font-size:20px",text:"Add your own"}),$("span",{class:"muted",style:"font-size:12px;white-space:nowrap",text:`${custom.length} added`})),
+    ...custom.map(c=>$("div",{class:"stack"},answerRow("c:"+c.id,c.name,""),$("button",{class:"btn small ghost",style:"align-self:flex-start",onclick:()=>{const b=JSON.parse(JSON.stringify(S.boundaries)); b.custom=(b.custom||[]).filter(x=>x.id!==c.id); S.boundaries=b; save("boundaries"); render();},text:"Remove "+c.name}))),
+    $("form",{class:"row",onsubmit:e=>{e.preventDefault(); const t=addIn.value.trim(); if(!t) return; const b=JSON.parse(JSON.stringify(S.boundaries||{a:{},b:{}})); b.custom=(b.custom||[]).concat({id:Date.now().toString(36),name:t.slice(0,60)}); S.boundaries=b; save("boundaries"); toast("Added. You both can answer it now."); render();}},
+      $("div",{style:"flex:1;min-width:0"},addIn),$("button",{class:"btn primary",type:"submit",text:"Add"}))));
+  return out;
+}function viewHome(){
+  const thisMonth=monthCount();
+  const now=new Date(), first=new Date(now.getFullYear(),now.getMonth(),1), days=new Date(now.getFullYear(),now.getMonth()+1,0).getDate();
+  const played=new Set(S.nights.dates||[]);
+  const monthShort=now.toLocaleString(undefined,{month:"short"});
+  const grid=$("div",{class:"calgrid"});
+  for(let d=1;d<=days;d++){ const key=ymd(new Date(now.getFullYear(),now.getMonth(),d));
+    grid.append($("span",{class:(played.has(key)?"on ":"")+(d===now.getDate()?"today":""),title:monthShort+" "+d})); }
+  const monthName=now.toLocaleString(undefined,{month:"long"});
+  return [
+    header(),
+    $("div",{class:"stats"},
+      $("div",{class:"stat"},$("span",{class:"eyebrow",text:"Days played"}),$("span",{class:"big"},String(new Set(S.nights.dates||[]).size),$("small",{text:new Set(S.nights.dates||[]).size===1?"day":"days"})),
+        $("span",{class:"muted",style:"font-size:13px",text:"Every day you play together counts."}))
+    ),
+    $("div",{class:"cal"},
+      $("div",{class:"row",style:"justify-content:space-between"},$("span",{style:"font-weight:500;font-size:14px",text:monthName}),$("span",{class:"muted",style:"font-size:12px",text:`${thisMonth} night${thisMonth===1?"":"s"} this month`})),
+      grid
+    ),
+    $("button",{class:"start",onclick:()=>{ if(!me){askWho();return;} logNight(); tab="play"; render(); window.scrollTo(0,0)},text:"Start game night"}),
+    $("p",{class:"muted",style:"margin:0;font-size:13px;text-align:center",text:"Every night starts soft and warms up the more cards you play."})
+  ];
+}
+/* Swipe an open card left or right to pass on it. */
+function addSwipe(el){
+  let x0=null, dx=0;
+  el.classList.add("swipeable");
+  el.addEventListener("pointerdown",e=>{ x0=e.clientX; dx=0; try{el.setPointerCapture(e.pointerId)}catch(_){} el.classList.add("dragging"); });
+  el.addEventListener("pointermove",e=>{ if(x0===null) return; dx=e.clientX-x0; el.style.transform=`translateX(${dx}px) rotate(${dx/18}deg)`; el.style.opacity=String(Math.max(.35,1-Math.abs(dx)/400)); });
+  const end=()=>{ if(x0===null) return; x0=null; el.classList.remove("dragging");
+    if(Math.abs(dx)>90){ el.style.transform=`translateX(${dx>0?600:-600}px) rotate(${dx>0?25:-25}deg)`; el.style.opacity="0"; setTimeout(skip,220); }
+    else { el.style.transform=""; el.style.opacity=""; } };
+  el.addEventListener("pointerup",end); el.addEventListener("pointercancel",end);
+  return el;
+}
+function cardEl(){
+  const el = cardFace();
+  const c = nightN()>0 ? S.live.card : null;
+  return (c && !c.done) ? addSwipe(el) : el;
+}
+function cardFace(){
+  const c = nightN()>0 ? S.live.card : null;
+  if(!c) return $("div",{class:"card back"},$("div",{class:"eyebrow",style:"color:var(--amber)",text:"For the Lovers"}),$("div",{class:"text",text:"Draw the first card"}),$("div",{class:"muted",text:"Every card says if you ask it or do it."}));
+  if(c.done){ const up=other(S.live.by||me);
+    return up===me ? $("div",{class:"card back"},$("div",{class:"eyebrow",style:"color:var(--amber)",text:"Your turn"}),$("div",{class:"text",text:"You're up."}),$("div",{class:"muted",text:"Draw your next card."}))
+      : $("div",{class:"card back"},$("div",{class:"eyebrow",style:"color:var(--amber)",text:nm(up)+"'s turn"}),$("div",{class:"text",text:nm(up)+" is up."}),$("div",{class:"muted",text:"Their card shows here once they draw it."})); }
+  if(!c.done && me && S.live.by!==me) return $("div",{class:"card back"},$("div",{class:"eyebrow",style:"color:var(--amber)",text:nm(S.live.by)+" drew a card"}),$("div",{class:"text",text:"Listen up. "+nm(S.live.by)+" is reading it to you."}),$("div",{class:"muted",text:"You'll see it once it's done."}));
+  const key=c.id+"#"+S.live.n; const fl = key!==lastCardKey; lastCardKey=key;
+  return $("div",{class:"card"+(fl?" flip":"")+(c.done?" done":""),style:`--dc:${DECKS[c.deck].color}`},
+    c.done ? $("div",{class:"stamp",text:"Done"}) : null,
+    $("div",{class:"deck"},$("span",{text:DECKS[c.deck].name}),$("span",{class:"kind kind-"+(c.kind||"do"),text:c.kind==="ask"?"Ask "+nm(other(S.live.by||"a")):"Your turn to do it"})),
+    $("div",{class:"text",text:c.text}),
+    $("div",{class:"foot"},$("span",{text:"Drawn by "+nm(S.live.by||"a")}),$("span",{text: (c.deck==="brat"||c.deck==="yessir")&&S.settings.safeword ? "Safeword: "+S.settings.safeword : "#"+S.live.n}))
+  );
+}
+function viewPlay(){
+  const fresh = nightN()>0, c = S.live.card, by = S.live.by, mine = by===me;
+  const open = fresh && c && !c.done;
+  const nextUp = (fresh && c) ? other(by) : null;
+  const myTurn = !fresh || !c || (c.done && nextUp===me);
+  const out=[ header() ];
+  if(S.live.reveal && Date.now()-(S.live.reveal.at||0) < 1000*60*60*6){
+    const r=S.live.reveal;
+    out.push($("div",{class:"reveal"},$("span",{class:"eyebrow",style:"color:var(--amber)",text:`${nm(r.by)}'s secret mission`}),
+      $("div",{style:"font-family:var(--display);font-size:18px",text:r.text}),
+      $("span",{class:"muted",style:"font-size:13px",text:r.done?"Mission accomplished.":"They didn't pull it off this time."})));
+  }
+  out.push(heatMeter());
+  out.push($("div",{class:"turn"}, !(fresh && c) ? "Ready when you are"
+    : open ? (mine ? (c.kind==="ask" ? "Ask "+nm(other(me))+" this one" : "This one's on you") : [$("em",{text:nm(by)}),"'s turn"])
+    : myTurn ? "Your turn" : [$("em",{text:nm(nextUp)}),"'s turn"]));
+  out.push($("div",{class:"stage"},cardEl()));
+  if(fresh && S.live.card && S.live.card.swCheck && !S.live.card.done) out.push($("div",{class:"checkin",text: S.settings.safeword ? `First brat card tonight. Both of you say your safeword out loud before ${nm(by)} reads it: \u201c${S.settings.safeword}.\u201d If either of you says it, everything stops.` : `First brat card tonight. Before ${nm(by)} reads it, pick a safeword together and save it in Boundaries. If either of you says it, everything stops.`}));
+  if(fresh && S.live.card && S.live.card.checkIn && (mine || S.live.card.done)) out.push($("div",{class:"checkin",text:"Check in first: one of you said Maybe to this. Ask, and either of you can pass."}));
+  out.push($("div",{class:"actions"},
+    open ? $("button",{class:"btn primary",onclick:markDone,text:"Done \u2713"})
+      : myTurn ? $("button",{class:"btn primary",onclick:()=>draw(me),text: c&&fresh?"Draw next card":"Draw a card"}) : null,
+    fresh && S.live.card && (mine || S.live.card.done) ? $("button",{class:"btn",onclick:keepCard,text:"♡ Keep"}) : null
+  ));
+  if(fresh && S.live.doneNight===ymd(new Date()) && S.live.doneCount) out.push($("p",{class:"muted",style:"margin:0;text-align:center;font-size:13px",text:`${S.live.doneCount} card${S.live.doneCount===1?"":"s"} done tonight`}));
+  if(open) out.push($("p",{class:"muted",style:"margin:0;text-align:center;font-size:12px",text:"Swipe the card away to pass. You'll get another one like it."}));
+  if(open) out.push($("div",{class:"actions"},
+    $("button",{class:"btn small ghost",onclick:skip,text:"Pass on this one"}),
+    !mine ? null : $("button",{class:"btn small ghost",onclick:banCard,text:"Not for us — remove it"})
+  ));
+  if(fresh && !cooled() && nightN()>4) out.push($("div",{class:"actions"},$("button",{class:"btn small sw",onclick:safeword,text:"Safeword \u2014 stop the spice"})));
+  const ms=$("div",{class:"mission"},$("div",{class:"row",style:"justify-content:space-between"},$("b",{text:"Your secret mission"}),$("span",{class:"muted",style:"font-size:12px",text:"Only this phone sees it"})));
+  if(myMission){
+    ms.append($("div",{class:"secret",text:myMission}),
+      $("div",{class:"row"},$("button",{class:"btn small primary",onclick:()=>revealMission(true),text:"I did it — reveal"}),
+        $("button",{class:"btn small",onclick:()=>revealMission(false),text:"Didn't happen — reveal"}),
+        $("button",{class:"btn small ghost",onclick:newMission,text:"New one"})));
+  } else ms.append($("span",{class:"muted",style:"font-size:13px",text:"Get a hidden challenge to sneak in tonight. They guess it at the end."}),
+      $("button",{class:"btn small",style:"align-self:flex-start",onclick:newMission,text:"Give me a mission"}));
+  out.push(ms);
+  return out;
+}
+function viewMemories(){
+  const items=S.memories.items||[];
+  const out=[header(),$("h2",{style:"font-size:26px",text:"Memories"}),$("p",{class:"muted",style:"margin:0",text:"Cards you kept. Tap ♡ Keep during a game to add one."})];
+  if(!items.length) out.push($("div",{class:"empty",text:"Nothing saved yet. Your favorite moments will collect here."}));
+  else out.push($("div",{class:"mem"}, items.map((m,i)=>$("div",{class:"memitem",style:`--dc:${(DECKS[m.deck]||DECKS.sweet).color}`},
+    $("p",{text:m.text}),
+    $("div",{class:"row",style:"justify-content:space-between"},
+      $("small",{text:`${(DECKS[m.deck]||{name:""}).name} · ${nm(m.by||"a")} · ${new Date(m.date+"T12:00").toLocaleDateString(undefined,{month:"short",day:"numeric",year:"numeric"})}`}),
+      $("button",{class:"btn small ghost",onclick:()=>{S.memories.items=items.filter((_,j)=>j!==i);save("memories");render()},text:"Remove"}))
+  ))));
+  return out;
+}
+function setPace(i, d){
+  const L=paceLens(); L[i]=Math.min(20,Math.max(1,L[i]+d));
+  S.settings=Object.assign({},S.settings,{pace:L}); save("settings"); render();
+}
+const openLevels = new Set();
+function paceBox(){
+  const L=paceLens(); let start=1;
+  const paused=S.settings.paused||[];
+  const rows=HEAT.map((lv,i)=>{
+    const range = i<3 ? (L[i]===1?`Card ${start}`:`Cards ${start}–${start+L[i]-1}`) : `Card ${start} and on`;
+    if(i<3) start+=L[i];
+    const cats=Object.keys(lv.w).filter(k=>lv.w[k]>0 && k!=="jyesno" && allCards(k).some(c=>c.lv.includes(i)));
+    const det=$("details",{class:"lvl",open:openLevels.has(i)},
+      $("summary",{},$("div",{style:"font-family:var(--display);font-size:18px",text:lv.name}),$("div",{class:"muted",style:"font-size:12px",text:range+" · "+lv.sub+" · tap to see what's in it"})),
+      $("div",{class:"chips",style:"margin-top:8px"},cats.map(k=>$("span",{class:"chip"+(paused.includes(k)?" paused":""),text:DECKS[k].name+(paused.includes(k)?" (off)":"")}))));
+    det.addEventListener("toggle",()=>{ det.open?openLevels.add(i):openLevels.delete(i); });
+    return $("div",{class:"srow"}, det,
+      i<3 ? $("div",{class:"stepper"},
+        $("button",{type:"button","aria-label":"Fewer cards in "+lv.name,onclick:()=>setPace(i,-1),disabled:L[i]<=1,text:"–"}),
+        $("output",{text:String(L[i])}),
+        $("button",{type:"button","aria-label":"More cards in "+lv.name,onclick:()=>setPace(i,1),disabled:L[i]>=20,text:"+"}))
+      : $("span",{class:"muted",style:"font-size:12px;flex-shrink:0",text:"Rest of the night"}));
+  });
+  return $("div",{class:"form"},
+    $("h3",{style:"font-size:20px",text:"Game pace"}),
+    $("p",{class:"muted",style:"margin:0;font-size:13px",text:"Every night moves through these levels. Use – and + to set how many cards each one lasts."}),
+    ...rows);
+}let resetArmed = false;
+function viewSettings(){
+  const st=S.settings;
+  const nameIn=k=>{ const i=$("input",{id:"name"+k,value:nm(k),maxlength:"24"}); i.addEventListener("change",()=>{ const n=Object.assign({},S.settings.names||{}); n[k]=i.value.trim()||(k==="a"?"Player one":"Player two"); S.settings=Object.assign({},S.settings,{names:n}); save("settings"); toast("Saved."); render(); }); return i; };
+  const deckSel=$("select",{id:"cdeck"},Object.entries(DECKS).filter(([k])=>k!=="jyesno").map(([k,d])=>$("option",{value:k,text:d.name})));
+  const cText=$("textarea",{id:"ctext",placeholder:"An inside joke, a dare only you two get…",maxlength:"240"});
+  const custom=st.custom||[], banned=st.banned||[];
+  const cardName=id=>{ const d=id.startsWith("c-")?(custom.find(x=>x.id===id)||{}).deck:id.split("-")[0]; const c=d&&DECKS[d]?allCards(d).find(x=>x.id===id):null; return c?fill(c.text,me):"A card you removed"; };
+  return [header(),
+    $("h2",{style:"font-size:26px",text:"Settings"}),
+    $("p",{class:"muted",style:"margin:0;font-size:13px",text:"Changes save on their own."}),
+    $("div",{class:"form"},
+      $("h3",{style:"font-size:20px",text:"You two"}),
+      $("div",{class:"two"},$("div",{class:"field"},$("label",{for:"namea",text:"Her name"}),nameIn("a")),$("div",{class:"field"},$("label",{for:"nameb",text:"His name"}),nameIn("b"))),
+      $("div",{class:"srow"},$("div",{style:"min-width:0"},$("div",{style:"font-weight:500",text:"This phone belongs to"}),$("div",{class:"muted",style:"font-size:12px",text:"So the game knows whose cards to deal here."})),
+        $("div",{class:"seg tight",role:"group","aria-label":"This phone belongs to"},["a","b"].map(k=>$("button",{class:"seg-yes","aria-pressed":String(me===k),onclick:()=>{me=k;lsSet("ah_me",k);render();},text:nm(k)}))))),
+    paceBox(),
+    $("div",{class:"form"},
+      $("h3",{style:"font-size:20px",text:"Card categories"}),
+      $("p",{class:"muted",style:"margin:0;font-size:13px",text:"Turn a category off and its cards stop coming up until you turn it back on."}),
+      ...Object.entries(DECKS).filter(([k])=>k!=="jyesno").map(([k,d])=>{
+        const on=!(st.paused||[]).includes(k);
+        const set=()=>{ const keys = k==="yesno" ? ["yesno","jyesno"] : [k]; let pz=(S.settings.paused||[]).filter(x=>!keys.includes(x)); if(on) pz=pz.concat(keys); S.settings=Object.assign({},S.settings,{paused:pz}); save("settings"); render(); };
+        return $("div",{class:"srow"},
+          $("div",{style:"min-width:0"},$("div",{style:"font-weight:500",text:d.name}),$("div",{class:"muted",style:"font-size:12px",text:levelsFor(k).join(" · ")||"—"})),
+          $("button",{class:"switch",role:"switch","aria-checked":String(on),"aria-label":d.name+(on?" is on":" is off"),onclick:set}));
+      })),
+    $("form",{class:"form",onsubmit:e=>{e.preventDefault(); const t=cText.value.trim(); if(!t) return;
+      S.settings=Object.assign({},S.settings,{custom:(S.settings.custom||[]).concat({id:"c-"+Date.now().toString(36),deck:deckSel.value,text:t.slice(0,240)})});
+      save("settings"); toast("Card added to "+DECKS[deckSel.value].name+"."); render();}},
+      $("h3",{style:"font-size:20px",text:"Your cards"}),
+      $("div",{class:"field"},$("label",{for:"ctext",text:"Write a card"}),cText),
+      $("div",{class:"row"},$("div",{class:"field",style:"flex:1;min-width:0"},$("label",{for:"cdeck",text:"Put it in"}),deckSel),$("button",{class:"btn primary",type:"submit",style:"align-self:flex-end",text:"Add card"})),
+      custom.length ? $("div",{class:"customlist"},$("b",{style:"font-size:13px",text:"Cards you wrote"}),custom.map(c=>$("div",{},$("span",{},$("span",{class:"muted",text:DECKS[c.deck].name+": "}),c.text),
+        $("button",{type:"button",class:"btn small ghost",onclick:()=>{S.settings=Object.assign({},S.settings,{custom:(S.settings.custom||[]).filter(x=>x.id!==c.id)});save("settings");render()},text:"Delete"})))) : null,
+      $("div",{class:"customlist"},$("b",{style:"font-size:13px",text:"Cards you took out"}),
+        banned.length ? banned.map(id=>$("div",{},$("span",{text:cardName(id)}),
+          $("button",{type:"button",class:"btn small ghost",onclick:()=>{S.settings=Object.assign({},S.settings,{banned:(S.settings.banned||[]).filter(x=>x!==id)});save("settings");render()},text:"Put back"})))
+        : $("span",{class:"muted",text:"None. Tap “Not for us” on any card to take it out."}))),
+    $("div",{class:"form"},
+      $("h3",{style:"font-size:20px",text:"Start tonight over"}),
+      $("p",{class:"muted",style:"margin:0;font-size:13px",text:"Clears tonight's cards and takes you back to Slow Jams. Memories, boundaries and settings stay."}),
+      $("button",{class:"btn"+(resetArmed?" primary":""),style:"align-self:flex-start",onclick:()=>{
+        if(!resetArmed){ resetArmed=true; render(); setTimeout(()=>{ if(resetArmed){ resetArmed=false; render(); } },4000); return; }
+        resetArmed=false; S.live=Object.assign({},S.live,{card:null,by:null,n:0,night:"",history:[],reveal:null,cool:"",swNight:"",ys:0}); save("live"); toast("Starting fresh."); render(); },
+        text:resetArmed?"Tap again to start over":"Start tonight over"}))
+  ];
+}function askWho(){
+  const box=document.getElementById("whoBox"), btns=document.getElementById("whoBtns"); btns.innerHTML="";
+  ["a","b"].forEach(k=>btns.append($("button",{class:"btn primary",onclick:()=>{me=k;lsSet("ah_me",k);box.hidden=true;render()},text:"I'm "+nm(k)})));
+  box.hidden=false;
+}
+/* ---------- boundaries walkthrough ---------- */
+/* One question at a time. q = the question, what = what it means in plain words,
+   game = a card it unlocks, tip = good to know. {you} = the other person, {brat}/{tamer} = the brat and the tamer. */
+const WIZ = {
+  talk:{q:"Are you comfortable saying exactly what you want, out loud?",
+    what:"Dirty talk with no beating around the bush. Telling each other what you want done, where, and how, in plain words.",
+    game:"Tell {you} exactly how you want to be touched tonight."},
+  fantasy:{q:"Do you want to share fantasies with each other?",
+    what:"Things you've pictured or daydreamed about but never said out loud. Sharing one doesn't mean you have to act it out. Sometimes it's just fun to say it.",
+    game:"Tell {you} a fantasy you haven't said out loud yet."},
+  praise:{q:"Do you like being praised in the moment?",
+    what:"Hearing that you're doing good, being called a good girl or good boy, being told how good you feel. For some people it's a big turn-on. For others it feels awkward.",
+    game:"Tell {you} what a good job they did tonight. Be specific."},
+  names:{q:"Are you into being called dirty names?",
+    what:"Nasty names said in the heat of the moment, the kind you'd never say outside the bedroom. It's kind of the opposite of praise, and plenty of people love one and not the other.",
+    tip:"If you're a Yes or a Maybe, say out loud which words are fine and which ones are off the table."},
+  photos:{q:"Are you okay sending and getting spicy pictures?",
+    what:"Photos sent during the game that the other person keeps on their phone.",
+    tip:"Once it's sent, it lives on their phone. You can say Yes to pictures but No to your face being in them, and you can always ask for one to be deleted."},
+  voice:{q:"Are you okay sending voice notes?",
+    what:"Recordings they can play back later, like a whisper, a moan, or you telling them what you want.",
+    tip:"Same as pictures: once it's sent, they have it."},
+  control:{q:"Do you like one person taking the lead while the other follows?",
+    what:"One of you gives the directions: what to do, what to touch, how slow to go. The other one follows. You can take turns being in charge.",
+    game:"For the next two minutes, {you} follows your instructions. Nothing else."},
+  brat:{q:"Are you into brat and tamer play?",
+    what:"{brat} plays the brat: talking back, teasing, breaking little rules on purpose. {tamer} plays the tamer: calling her out and handing out playful consequences. It's a game you're both in on.",
+    tip:"This is the one where a safeword matters most. You can set yours at the top of Boundaries."},
+  beg:{q:"Do you like begging, or being made to ask permission?",
+    what:"Not doing anything until the other person says you can. Asking nicely, or begging, before you get what you want.",
+    game:"Beg {you} for what you want. They decide if it was good enough."},
+  denial:{q:"Are you into edging, or being made to wait?",
+    what:"Getting close to finishing, then stopping and starting over. Or being told you can't finish until the other person says so. It builds things up.",
+    game:"You're not allowed to finish until {you} says so."},
+  rough:{q:"Do you like it a little rough in general?",
+    what:"Being handled with some force, like grabbing, pinning you down, or pulling you in close hard. The next few questions break rough play down, so you can say Yes to some and No to others."},
+  spank:{q:"How do you feel about spanking?",
+    what:"Smacks with a hand, usually on the butt or thighs. It can go from playful taps to something that really stings. This covers giving and getting.",
+    tip:"Stick to the fleshy spots like the butt and upper thighs. Stay away from the lower back, where the kidneys are, and the spine."},
+  whip:{q:"How about whips or floggers?",
+    what:"A flogger has lots of soft strands and feels more like a heavy thud. A whip or riding crop is thinner and stings more. Both usually go on the butt, thighs or upper back.",
+    tip:"Start light and build up slowly. Same safe spots as spanking."},
+  hair:{q:"How do you feel about hair pulling?",
+    what:"Grabbing a handful of hair close to the scalp and pulling gently, usually to tilt the head back or guide it.",
+    tip:"Grab close to the scalp, not the ends, so it pulls evenly. Speak up about any braids, extensions or wigs you don't want touched."},
+  tied:{q:"How about being tied up or held down?",
+    what:"Wrists held over your head, or tied with something soft like a scarf, a belt or cuffs, so you can't move much.",
+    tip:"Never leave someone alone while they're tied up. Keep scissors close by, check that hands aren't going numb, and keep anything tight away from the neck."},
+  spit:{q:"How do you feel about spit?",
+    what:"Spitting on your partner or in their mouth during sex. Some people find it really hot, and some people it's a hard no for, so it gets its own question."},
+  toys:{q:"Do you want to use toys together?",
+    what:"Vibrators, wands or anything else made for pleasure, used on yourself while the other person listens or tells you what to do.",
+    game:"Grab a toy. {you} tells you exactly how to use it, step by step."},
+  plugs:{q:"How about butt plugs?",
+    what:"A small toy that stays inside your butt for a while, often worn during a game or while you do something else.",
+    tip:"Only use toys with a wide flared base, use plenty of lube, and start small.",
+    game:"Put your plug in. It stays in until {you} says it can come out."},
+  remote:{q:"How about remote-control toys?",
+    what:"Toys that connect to an app on the other person's phone, so they can control the vibration from anywhere. They're made for long distance.",
+    game:"Hand {you} the controls of your toy for the next five minutes."},
+  self:{q:"Are you okay touching yourself while the other listens?",
+    what:"Pleasuring yourself on the phone while your partner listens, talks you through it, or tells you what to do.",
+    game:"Tell {you} what your hands are doing right now, in real time."},
+  oral:{q:"How do you feel about oral?",
+    what:"Using your mouth on your partner's private parts."},
+  rim:{q:"How do you feel about eating ass?",
+    what:"Using your mouth and tongue on your partner's butt. Plenty of people love giving it and not getting it, or the other way around, so you answer each one.",
+    tip:"Showering right before makes everybody more comfortable."},
+  anal:{q:"How do you feel about anal?",
+    what:"Anything going inside the butt: fingers, toys or sex.",
+    tip:"Go slow, use lots of lube, and stop if it hurts. Always wash up before going from the butt to anywhere else."}
+};
+const WIZ_GROUP = {
+  "Talk":"This part is about words: how you talk to each other and what you share.",
+  "Power":"Who leads and who follows. All of it is play you're both in on.",
+  "Rough play":"From a little rough to something that stings. You can say Yes to some and No to others.",
+  "Toys and touch":"Toys and touching yourself while you're on the phone.",
+  "Giving and getting":"Some things you might love to give but not get, or the other way around. So these are asked both ways.",
+  "Body":"Last part. Where do you love attention, and where should they leave alone?"
+};
+const WIZ_ANS = [["yes","Yes, I'm into it"],["maybe","Maybe, let's talk first"],["no","No, not for me"]];
+let wiz = null;
+function wfill(t){ return t.replace(/\{brat\}/g,nm(bratKey())).replace(/\{tamer\}/g,nm(other(bratKey()))).replace(/\{you\}/g,nm(other(me))); }
+function wizSteps(){
+  const st=[{t:"intro"}];
+  for(const g of TOPIC_GROUPS){
+    st.push({t:"group",g});
+    (g.items||[]).forEach(([k,name])=>st.push({t:"item",k,name,g:g.title}));
+    (g.pairs||[]).forEach(([k,name])=>st.push({t:"pair",k,name,g:g.title}));
+    if(g.parts) st.push({t:"body",g});
+  }
+  st.push({t:"custom"},{t:"done"});
+  return st;
+}
+function stepDone(s){
+  if(s.t==="item") return !!answer(me,s.k);
+  if(s.t==="pair") return !!answer(me,s.k+":give") && !!answer(me,s.k+":get");
+  if(s.t==="body") return s.g.parts.every(p=>answer(me,"body:"+p));
+  return true;
+}
+function wizStart(){
+  const st=wizSteps(), saved=lsGet("ftl_wiz",null);
+  if(typeof saved==="number" && saved>0 && saved<st.length-1) wiz=saved;
+  else { const fo=st.findIndex(x=>["item","pair","body"].includes(x.t) && !stepDone(x)); wiz = (fo<=2) ? 0 : fo; }
+  render(); window.scrollTo(0,0);
+}
+function wizGo(i){ const n=wizSteps().length; wiz=Math.max(0,Math.min(n-1,i)); lsSet("ftl_wiz",wiz); render(); window.scrollTo(0,0); }
+function wizExit(){ wiz=null; lsSet("ftl_wiz",null); render(); window.scrollTo(0,0); }
+function wizAnswer(k,v){
+  const b=JSON.parse(JSON.stringify(S.boundaries||{a:{},b:{},custom:[]}));
+  b[me]=Object.assign({},b[me]||{},{[k]:v}); S.boundaries=b; save("boundaries");
+  setTimeout(()=>wizGo(wiz+1),160); render();
+}
+function theirSays(k){ const t=answer(other(me),k); return t ? `${nm(other(me))} said ${ANS[t]}.` : `${nm(other(me))} hasn't answered this yet.`; }
+function viewWizard(){
+  const st=wizSteps(), s=st[wiz], n=st.length;
+  const qs=st.filter(x=>["item","pair","body"].includes(x.t)), qi=qs.indexOf(s);
+  const top=$("div",{class:"wtop"},
+    $("button",{class:"btn small ghost",onclick:wizExit,text:"Save and exit"}),
+    $("div",{class:"prog",style:"margin:0"},$("i",{style:`width:${Math.round(wiz/(n-1)*100)}%`})),
+    $("span",{class:"muted",style:"font-size:12px;white-space:nowrap",text:qi>=0?`${qi+1} of ${qs.length}`:""}));
+  const nav=(nextLabel)=>$("div",{class:"wnav"},
+    wiz>0 ? $("button",{class:"btn ghost",onclick:()=>wizGo(wiz-1),text:"Back"}) : $("span",{}),
+    $("button",{class:"btn primary",onclick:()=>wizGo(wiz+1),text:nextLabel||"Next"}));
+  const card=[];
+  if(s.t==="intro"){
+    card.push($("h2",{class:"wq",text:"Let's set your boundaries"}),
+      $("p",{class:"wp",text:"We'll go one thing at a time. Each one comes with a short explanation, so you always know exactly what you're saying yes or no to."}),
+      $("div",{class:"wkey"},
+        $("div",{},$("b",{text:"Yes"})," means you're into it, and those cards can come up."),
+        $("div",{},$("b",{text:"Maybe"})," means you're curious but want to talk first. Those cards come with a check-in."),
+        $("div",{},$("b",{text:"No"})," means it never comes up. No explaining needed.")),
+      $("p",{class:"wp muted",text:`${nm(other(me))} will see your answers and you'll see theirs, so you can talk about it. You can change anything later, even in the middle of a game. It takes about five minutes.`}),
+      $("button",{class:"btn primary wbig",onclick:()=>wizGo(1),text:"Let's start"}));
+  } else if(s.t==="group"){
+    card.push($("div",{class:"eyebrow",text:"Next up"}),$("h2",{class:"wq",text:s.g.title}),$("p",{class:"wp",text:WIZ_GROUP[s.g.title]||""}),nav("Got it"));
+  } else if(s.t==="item"){
+    const w=WIZ[s.k]||{q:s.name+"?",what:""}, cur=answer(me,s.k);
+    card.push($("div",{class:"eyebrow",text:s.g+" · "+s.name}),$("h2",{class:"wq",text:wfill(w.q)}),
+      w.what?$("p",{class:"wp",text:wfill(w.what)}):null,
+      w.game?$("div",{class:"wgame"},$("span",{class:"eyebrow",text:"A card it could unlock"}),$("span",{text:wfill(w.game)})):null,
+      w.tip?$("div",{class:"wtip"},$("b",{text:"Good to know: "}),wfill(w.tip)):null,
+      $("div",{class:"wans"},WIZ_ANS.map(([v,l])=>$("button",{class:"wbtn wb-"+v,"aria-pressed":String(cur===v),onclick:()=>wizAnswer(s.k,v),text:l}))),
+      $("p",{class:"muted",style:"margin:0;font-size:12px;text-align:center",text:theirSays(s.k)}),
+      $("div",{class:"wnav"},wiz>0?$("button",{class:"btn ghost",onclick:()=>wizGo(wiz-1),text:"Back"}):$("span",{}),$("button",{class:"btn ghost",onclick:()=>wizGo(wiz+1),text:cur?"Next":"Skip for now"})));
+  } else if(s.t==="pair"){
+    const w=WIZ[s.k]||{q:s.name+"?",what:""};
+    const row=(side,label)=>{ const key=s.k+":"+side, cur=answer(me,key);
+      return $("div",{class:"wpair"},$("b",{text:label}),
+        $("div",{class:"wans row3"},WIZ_ANS.map(([v,l])=>$("button",{class:"wbtn small wb-"+v,"aria-pressed":String(cur===v),onclick:()=>{ const b=JSON.parse(JSON.stringify(S.boundaries||{a:{},b:{}})); b[me]=Object.assign({},b[me]||{},{[key]:v}); S.boundaries=b; save("boundaries"); render(); },text:l.split(",")[0]}))),
+        $("span",{class:"muted",style:"font-size:12px",text:theirSays(key)})); };
+    card.push($("div",{class:"eyebrow",text:s.g+" · "+s.name}),$("h2",{class:"wq",text:w.q}),
+      w.what?$("p",{class:"wp",text:w.what}):null,
+      w.tip?$("div",{class:"wtip"},$("b",{text:"Good to know: "}),w.tip):null,
+      row("give","Giving it"),row("get","Getting it"),nav(stepDone(s)?"Next":"Skip for now"));
+  } else if(s.t==="body"){
+    card.push($("div",{class:"eyebrow",text:"Body"}),$("h2",{class:"wq",text:"Where do you love attention?"}),
+      $("p",{class:"wp",text:"Go spot by spot. Love it means pay attention there. Maybe means it depends on the mood. No means leave it alone. The dot shows what "+nm(other(me))+" said."}),
+      ...s.g.parts.map(p=>answerRow("body:"+p,p,"",[["love","Love it"],["maybe","Maybe"],["no","No"]])),
+      nav());
+  } else if(s.t==="custom"){
+    const custom=((S.boundaries||{}).custom||[]);
+    const addIn=$("input",{id:"wizNew",placeholder:"For example: hickeys, role play as strangers",maxlength:"60"});
+    card.push($("div",{class:"eyebrow",text:"Almost done"}),$("h2",{class:"wq",text:"Anything we missed?"}),
+      $("p",{class:"wp",text:"Add anything specific to you two. You'll both get to answer it."}),
+      ...custom.map(c=>answerRow("c:"+c.id,c.name,"")),
+      $("form",{class:"row",onsubmit:e=>{e.preventDefault(); const t=addIn.value.trim(); if(!t) return; const b=JSON.parse(JSON.stringify(S.boundaries||{a:{},b:{}})); b.custom=(b.custom||[]).concat({id:Date.now().toString(36),name:t.slice(0,60)}); S.boundaries=b; save("boundaries"); render();}},
+        $("div",{style:"flex:1;min-width:0"},addIn),$("button",{class:"btn primary",type:"submit",text:"Add"})),
+      nav("Finish"));
+  } else {
+    const items=allItems(), mine=items.filter(([k])=>answer(me,k)).length;
+    card.push($("h2",{class:"wq",text:"You're all set"}),
+      $("p",{class:"wp",text:`You answered ${mine} of ${items.length}. Anything you skipped counts as open, and you can come back to it anytime.`}),
+      $("p",{class:"wp",text:`Next, check "Where you two line up" to see what you're both into and what to talk about with ${nm(other(me))}.`}),
+      $("button",{class:"btn primary wbig",onclick:wizExit,text:"See where we line up"}),
+      $("button",{class:"btn ghost",style:"align-self:center",onclick:()=>wizGo(1),text:"Go through it again"}));
+  }
+  return [header(), top, $("div",{class:"form wcard"},...card.filter(Boolean))];
+}
+
+function viewLocked(){
+  return [$("div",{class:"form",style:"margin-top:40px;text-align:center;align-items:center"},
+    $("div",{class:"logo",style:"width:96px;height:96px"}),
+    $("h2",{style:"font-size:26px",text:"For the Lovers"}),
+    $("p",{class:"muted",style:"margin:0",text:"This game only opens from your private link. Open the link you were sent, and it will remember this phone after that."}))];
+}
+function render(){
+  const app=document.getElementById("app"); app.innerHTML="";
+  if(!room){ const app=document.getElementById("app"); app.innerHTML=""; app.append(...viewLocked()); app.querySelector(".logo").innerHTML=LOGO_SVG; document.querySelector("nav.tabs").hidden=true; return; }
+  document.querySelector("nav.tabs").hidden=false;
+  const v = tab==="home"?viewHome():tab==="play"?viewPlay():tab==="memories"?viewMemories():tab==="limits"?viewBoundaries():viewSettings();
+  app.append(...v.flat().filter(Boolean)); renderTabs();
+}
+loadLocal(); render(); connect();
+</script>
+
+</body>
+</html>
