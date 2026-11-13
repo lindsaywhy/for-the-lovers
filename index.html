@@ -576,10 +576,26 @@ async function pull(){
       versions[k] = d.v; S[k] = Object.assign({}, JSON.parse(JSON.stringify(DEFAULTS[k])), d.data); lsSet("ah_"+k, S[k]); changed = true;
     }
     if(!synced || changed){ synced = true; safeRender(); }
+    turnAlert(changed);
   }catch(e){
     if(e.status===403 || e.status===400){ lsSet("ftl_room", null); room = null; render(); }
     else online(false);
   }
+}
+/* Your-turn alert: the tab title changes, and Android phones buzz, when it becomes your turn. */
+let lastTurnMine = null;
+function isMyTurn(){ const c=S.live.card; return nightN()>0 && !!c && !!c.done && other(S.live.by)===me; }
+function turnAlert(fromPartner){
+  const mine = isMyTurn();
+  document.title = mine ? "Your turn · For the Lovers" : "For the Lovers";
+  if(fromPartner && mine && lastTurnMine===false){ try{ navigator.vibrate && navigator.vibrate([120,80,120]); }catch(e){} toast("Your turn"); }
+  lastTurnMine = mine;
+}
+/* Opens Messages with a nudge ready to send. */
+function textLink(){
+  const msg = (me==="b" ? "Your turn, beautiful 😏" : "Your turn, baby 😏") + " Come back to our game: " + location.origin + location.pathname;
+  const sep = /iPhone|iPad|iPod/.test(navigator.userAgent) ? "&" : "?";
+  return "sms:" + sep + "body=" + encodeURIComponent(msg);
 }
 /* Don't redraw while someone is typing or mid-swipe. */
 function safeRender(){
@@ -751,7 +767,7 @@ function header(){
   return $("div",{class:"top"},
     $("div",{class:"brand"}, logo, $("div",{}, $("div",{class:"eyebrow",text:connOK?"For the Lovers":"For the Lovers \u00b7 reconnecting"}),
       $("h1",{}, nm("a")+" ", $("em",{text:"&"})," "+nm("b")))),
-    me ? $("button",{class:"who",onclick:askWho,text:"I'm "+nm(me)}) : $("button",{class:"who",onclick:askWho,text:"Who are you?"})
+    me ? null : $("button",{class:"who",onclick:askWho,text:"Who are you?"})
   );
 }
 function heatMeter(){
@@ -955,12 +971,6 @@ function viewPlay(){
   const nextUp = (fresh && c) ? other(by) : null;
   const myTurn = !fresh || !c || (c.done && nextUp===me);
   const out=[ header() ];
-  if(S.live.reveal && Date.now()-(S.live.reveal.at||0) < 1000*60*60*6){
-    const r=S.live.reveal;
-    out.push($("div",{class:"reveal"},$("span",{class:"eyebrow",style:"color:var(--amber)",text:`${nm(r.by)}'s secret mission`}),
-      $("div",{style:"font-family:var(--display);font-size:18px",text:r.text}),
-      $("span",{class:"muted",style:"font-size:13px",text:r.done?"Mission accomplished.":"They didn't pull it off this time."})));
-  }
   out.push(heatMeter());
   out.push($("div",{class:"turn"}, !(fresh && c) ? "Ready when you are"
     : open ? (mine ? (c.kind==="ask" ? "Ask "+nm(other(me))+" this one" : "This one's on you") : [$("em",{text:nm(by)}),"'s turn"])
@@ -970,7 +980,8 @@ function viewPlay(){
   if(fresh && S.live.card && S.live.card.checkIn && (mine || S.live.card.done)) out.push($("div",{class:"checkin",text:"Check in first: one of you said Maybe to this. Ask, and either of you can pass."}));
   out.push($("div",{class:"actions"},
     open ? $("button",{class:"btn primary",onclick:markDone,text:"Done \u2713"})
-      : myTurn ? $("button",{class:"btn primary",onclick:()=>draw(me),text: c&&fresh?"Draw next card":"Draw a card"}) : null,
+      : myTurn ? $("button",{class:"btn primary",onclick:()=>draw(me),text: c&&fresh?"Draw next card":"Draw a card"})
+      : $("a",{class:"btn",href:textLink(),text:`Text ${nm(nextUp)} it's their turn`}),
     fresh && S.live.card && (mine || S.live.card.done) ? $("button",{class:"btn",onclick:keepCard,text:"♡ Keep"}) : null
   ));
   if(fresh && S.live.doneNight===ymd(new Date()) && S.live.doneCount) out.push($("p",{class:"muted",style:"margin:0;text-align:center;font-size:13px",text:`${S.live.doneCount} card${S.live.doneCount===1?"":"s"} done tonight`}));
@@ -980,15 +991,6 @@ function viewPlay(){
     !mine ? null : $("button",{class:"btn small ghost",onclick:banCard,text:"Not for us — remove it"})
   ));
   if(fresh && !cooled() && nightN()>4) out.push($("div",{class:"actions"},$("button",{class:"btn small sw",onclick:safeword,text:"Safeword \u2014 stop the spice"})));
-  const ms=$("div",{class:"mission"},$("div",{class:"row",style:"justify-content:space-between"},$("b",{text:"Your secret mission"}),$("span",{class:"muted",style:"font-size:12px",text:"Only this phone sees it"})));
-  if(myMission){
-    ms.append($("div",{class:"secret",text:myMission}),
-      $("div",{class:"row"},$("button",{class:"btn small primary",onclick:()=>revealMission(true),text:"I did it — reveal"}),
-        $("button",{class:"btn small",onclick:()=>revealMission(false),text:"Didn't happen — reveal"}),
-        $("button",{class:"btn small ghost",onclick:newMission,text:"New one"})));
-  } else ms.append($("span",{class:"muted",style:"font-size:13px",text:"Get a hidden challenge to sneak in tonight. They guess it at the end."}),
-      $("button",{class:"btn small",style:"align-self:flex-start",onclick:newMission,text:"Give me a mission"}));
-  out.push(ms);
   return out;
 }
 function viewMemories(){
