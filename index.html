@@ -157,6 +157,27 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
 .guess{display:flex;flex-direction:column;gap:8px;background:var(--bg2);border:1px dashed var(--amber);border-radius:16px;padding:14px}
 .guess-res{text-align:center;font-weight:500}
 .guess-res.ok{color:var(--d-date)}
+.avwrap{width:180px;max-width:100%;aspect-ratio:200/440}
+.avwrap.small{width:96px}
+.avwrap svg{width:100%;height:100%;display:block}
+.avbtn{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:6px;flex-shrink:0}
+.undress-row{display:flex;gap:14px;align-items:center}
+.hearts-pill{background:var(--rose);color:var(--deep);border-radius:999px;padding:4px 12px;font-weight:600;font-size:13px;white-space:nowrap;font-variant-numeric:tabular-nums}
+.costumes{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+.costume{display:flex;flex-direction:column;align-items:center;gap:4px;padding:8px 4px;border-radius:14px;border:1px solid var(--line,rgba(255,255,255,.12));background:transparent;color:inherit;font:inherit;font-size:11px;cursor:pointer;min-width:0}
+.costume[aria-pressed="true"]{border-color:var(--rose);background:rgba(244,166,191,.12)}
+.costume .avwrap.small{width:100%;max-width:64px}
+@media (max-width:380px){.costumes{grid-template-columns:repeat(3,1fr)}}
+.pieces{display:flex;flex-wrap:wrap;gap:6px;justify-content:center}
+.swatches{display:flex;flex-wrap:wrap;gap:8px}
+.sw{width:32px;height:32px;border-radius:50%;border:2px solid var(--line);padding:0}
+.sw[aria-pressed="true"]{border-color:var(--fg);box-shadow:0 0 0 3px var(--rose)}
+.seg.segwrap{flex-wrap:wrap;border-radius:14px;align-self:flex-start}
+.btn:disabled{opacity:.5;cursor:default}
+.obwrap{display:flex;flex-direction:column;gap:14px;padding-top:12px}
+.obdots{display:flex;gap:6px;justify-content:center}
+.obdots i{width:22px;height:5px;border-radius:999px;background:var(--surface)}
+.obdots i.on{background:var(--rose)}
 .checkin{text-align:center;font-size:13px;color:var(--amber);border:1px solid var(--line);border-radius:12px;padding:8px 12px}
 .nudge{display:flex;gap:12px;align-items:center;justify-content:space-between;background:var(--surface);border:1px solid var(--rose);border-radius:16px;padding:12px 14px}
 .bline{display:flex;gap:10px;align-items:center;justify-content:space-between;flex-wrap:wrap;padding-top:10px;border-top:1px solid var(--line)}
@@ -534,6 +555,9 @@ const DEFAULTS = {
   nights:{dates:[]},
   memories:{items:[]},
   notes:{},
+  avatars:{},
+  hearts:{},
+  coupons:{},
   boundaries:{a:{}, b:{}, custom:[]}
 };
 
@@ -561,7 +585,7 @@ async function rpc(fn, args){
   return r.json();
 }
 function online(ok){ if(ok!==connOK){ connOK = ok; safeRender(); } }
-function save(name){
+function save(name, keys){
   const body = JSON.parse(JSON.stringify(S[name]));
   lsSet("ah_"+name, body);
   if(!room) return Promise.resolve();
@@ -571,6 +595,8 @@ function save(name){
       /* Boundaries and notes hold both people's answers: send only this phone's part, so saving at the same time never erases the other. */
       if(name==="boundaries") return rpc("ftl_merge", {p_room:room.id, p_secret:room.secret, p_key:name, p_patch:{[me]:body[me]||{}, custom:body.custom||[]}});
       if(name==="notes") return rpc("ftl_merge", {p_room:room.id, p_secret:room.secret, p_key:name, p_patch:{[me]:body[me]||null}});
+      /* Avatars, hearts and coupons: send only the people this change touched. */
+      if(keys && keys.length) return rpc("ftl_merge", {p_room:room.id, p_secret:room.secret, p_key:name, p_patch:Object.fromEntries(keys.map(k=>[k, body[k]===undefined?null:body[k]]))});
       return rpc("ftl_set", {p_room:room.id, p_secret:room.secret, p_key:name, p_data:body}); })
     .then(v=>{ versions[name] = v; online(true); })
     .catch(()=>{ online(false); toast("Couldn't save. Check your connection."); })
@@ -727,7 +753,9 @@ function markDone(){
   const today=ymd(new Date());
   /* Done hands the turn to your partner. Draw your next card when they're finished. */
   S.live = Object.assign({}, S.live, {card:Object.assign({}, c, {done:true}), doneNight:today, doneCount:(S.live.doneNight===today?(S.live.doneCount||0):0)+1});
-  save("live"); render();
+  save("live");
+  award(S.live.by||me, HEARTS_PER_LEVEL[HEAT.indexOf(heatFor(Math.max(1,nightN())))]||1);
+  render();
 }
 function safeword(){
   S.live = Object.assign({}, S.live, {cool: ymd(new Date())}); save("live"); render();
@@ -941,7 +969,7 @@ function viewHome(){
   return [
     header(),
     $("div",{class:"hello"},$("div",{class:"eyebrow",text: g.part==="late" ? "After hours" : g.part==="morning" ? "Good morning" : g.part==="day" ? "Hey you" : "Tonight"}),$("p",{class:"hello-text",text:g.text})),
-    tonight, notes, jarBox
+    tonight, undressCard(), notes, jarBox
   ];
 }
 /* Swipe an open card left or right to pass on it. */
@@ -1090,7 +1118,11 @@ function viewSettings(){
       $("button",{class:"btn"+(resetArmed?" primary":""),style:"align-self:flex-start",onclick:()=>{
         if(!resetArmed){ resetArmed=true; render(); setTimeout(()=>{ if(resetArmed){ resetArmed=false; render(); } },4000); return; }
         resetArmed=false; S.live=Object.assign({},S.live,{card:null,by:null,n:0,night:"",history:[],reveal:null,cool:"",swNight:"",ys:0}); save("live"); toast("Starting fresh."); render(); },
-        text:resetArmed?"Tap again to start over":"Start tonight over"}))
+        text:resetArmed?"Tap again to start over":"Start tonight over"})),
+    $("div",{class:"form"},
+      $("h3",{style:"font-size:20px",text:"The intro"}),
+      $("p",{class:"muted",style:"margin:0;font-size:13px",text:"Walk through how the game works again, from the beginning."}),
+      $("button",{class:"btn",style:"align-self:flex-start",onclick:()=>{ lsSet("ftl_onboarded",false); ob=0; render(); window.scrollTo(0,0); },text:"Replay the intro"}))
   ];
 }function askWho(){
   const box=document.getElementById("whoBox"), btns=document.getElementById("whoBtns"); btns.innerHTML="";
@@ -1301,7 +1333,7 @@ function guessScore(){ const g=S.live.guesses||{}; return g.night===ymd(new Date
 function setGuess(v){ S.live=Object.assign({},S.live,{card:Object.assign({},S.live.card,{guess:v})}); save("live"); render(); }
 function settleGuess(actual){
   const c=S.live.card, right=c.guess===actual, sc=guessScore();
-  if(right) sc[S.live.by]=(sc[S.live.by]||0)+1;
+  if(right){ sc[S.live.by]=(sc[S.live.by]||0)+1; award(S.live.by,1,"for the right guess"); }
   S.live=Object.assign({},S.live,{guesses:sc, card:Object.assign({},c,{answer:actual, right})}); save("live");
   toast(right ? "You know "+nm(other(S.live.by))+" 🎯" : "Not this time 😅"); render();
 }
@@ -1331,6 +1363,426 @@ function guessScoreLine(){
   const sc=guessScore(); if(!(sc.a||sc.b)) return null;
   return $("p",{class:"muted",style:"margin:0;text-align:center;font-size:13px",text:`Guessed right tonight: ${nm("a")} ${sc.a||0} · ${nm("b")} ${sc.b||0}`});
 }
+/* ---------- avatars (grown anime style) ---------- */
+/* Each of you designs your own avatar. Each night your partner picks the costume you wear, and spends hearts taking it off, outside in. */
+const SKIN = ["#f6d5bd","#e6b48f","#cc9068","#a86b45","#7d4b2c","#55311c"];
+const HAIRC = ["#17100c","#3f2618","#7a4a24","#c4914f","#8c2f45","#e6e0d9"];
+const EYEC = ["#3a2418","#6b4226","#2f6b4f","#2d4f7c","#7b3b6b","#b06a2c"];
+const CLOTHC = ["#163024","#f4a6bf","#e0609a","#1f2a44","#c8a96b","#f9f3ee","#111111","#7a2e3a"];
+const SHAPES = {a:{slim:[30,31,23,33],curvy:[32,36,24,42],thick:[36,42,31,50]}, b:{slim:[38,34,28,30],athletic:[45,42,32,33],big:[49,49,44,44]}};
+const HAIRS = {a:["long","afro","bun","braids","curls"], b:["fade","waves","locs","bald","twists"]};
+const HAIR_NAMES = {long:"Long",afro:"Afro puff",bun:"Bun",braids:"Braids",curls:"Curls",fade:"Fade",waves:"Waves",locs:"Locs",bald:"Bald",twists:"Twists"};
+const AV_DEFAULT = {
+  a:{skin:3,hair:"braids",hairc:0,eye:0,shape:"curvy",c1:1,c2:0,c3:3},
+  b:{skin:3,hair:"waves",hairc:0,eye:0,shape:"athletic",c1:0,c2:5,c3:3}
+};
+/* Costumes: pieces come off in this order. t = what gets drawn, c = its color (number = your outfit color slot). */
+const COSTUMES = {
+  a:{
+    everyday:{name:"Everyday",emoji:"👖",pieces:[["shoes","heels",{t:"heels",c:1}],["jacket","jacket",{t:"jacket",c:3}],["top","top",{t:"top",c:1,sleeve:"short"}],["jeans","jeans",{t:"pants",c:3}],["bra","bra",{t:"bra",c:2}],["panties","panties",{t:"panties",c:2}]]},
+    date:{name:"Date night",emoji:"🍷",pieces:[["shoes","heels",{t:"heels",c:"#b0123a"}],["jacket","leather jacket",{t:"jacket",c:"#141414"}],["dress","little black dress",{t:"dress",c:"#1a1a1a",len:262}],["bra","lace bra",{t:"bra",c:"#b0123a",lace:1}],["panties","lace panties",{t:"panties",c:"#b0123a",lace:1}]]},
+    nurse:{name:"Nurse",emoji:"🩺",pieces:[["hat","nurse cap",{t:"nursecap"}],["shoes","heels",{t:"heels",c:"#f6f2ee"}],["stockings","stockings",{t:"stockings",c:"#f6f2eecc"}],["dress","uniform",{t:"dress",c:"#f6f2ee",len:258,cross:1,collar:1}],["bra","bra",{t:"bra",c:"#e0609a"}],["panties","panties",{t:"panties",c:"#e0609a"}]]},
+    police:{name:"Officer",emoji:"👮‍♀️",pieces:[["hat","cap",{t:"policecap"}],["shoes","boots",{t:"boots",c:"#111"}],["belt","belt and cuffs",{t:"belt",cuffs:1}],["top","uniform shirt",{t:"top",c:"#24345c",sleeve:"short",badge:1,collar:1,buttons:1}],["skirt","skirt",{t:"skirt",c:"#1b2744",len:252}],["bra","bra",{t:"bra",c:"#111"}],["panties","panties",{t:"panties",c:"#111"}]]},
+    maid:{name:"French maid",emoji:"🧹",pieces:[["hat","headband",{t:"maidband"}],["apron","apron",{t:"apron"}],["shoes","heels",{t:"heels",c:"#111"}],["stockings","stockings",{t:"stockings",c:"#111111cc"}],["dress","dress",{t:"dress",c:"#141414",len:248,collar:1}],["bra","bra",{t:"bra",c:"#141414"}],["panties","panties",{t:"panties",c:"#141414"}]]},
+    flight:{name:"Flight attendant",emoji:"✈️",pieces:[["hat","hat",{t:"pillbox",c:"#7a2e3a"}],["scarf","scarf",{t:"scarf",c:"#f4a6bf"}],["jacket","blazer",{t:"blazer",c:"#7a2e3a"}],["shoes","heels",{t:"heels",c:"#7a2e3a"}],["skirt","pencil skirt",{t:"skirt",c:"#7a2e3a",len:280,pencil:1}],["bra","bra",{t:"bra",c:"#f6f2ee"}],["panties","panties",{t:"panties",c:"#f6f2ee"}]]},
+    boss:{name:"Boss lady",emoji:"💼",pieces:[["glasses","glasses",{t:"glasses"}],["jacket","blazer",{t:"blazer",c:"#1a1a1a"}],["shoes","heels",{t:"heels",c:"#1a1a1a"}],["top","blouse",{t:"top",c:"#f6f2ee",sleeve:"long",collar:1,buttons:1}],["skirt","pencil skirt",{t:"skirt",c:"#1a1a1a",len:280,pencil:1}],["bra","bra",{t:"bra",c:"#1a1a1a",lace:1}],["panties","panties",{t:"panties",c:"#1a1a1a",lace:1}]]},
+    bunny:{name:"Bunny",emoji:"🐰",pieces:[["ears","ears",{t:"bunnyears"}],["collar","bow tie",{t:"bowtie"}],["shoes","heels",{t:"heels",c:"#111"}],["stockings","fishnets",{t:"stockings",c:"#111111aa",net:1}],["corset","corset",{t:"corset",c:"#111"}],["panties","panties",{t:"panties",c:"#111"}]]}
+  },
+  b:{
+    everyday:{name:"Everyday",emoji:"🧢",pieces:[["shoes","sneakers",{t:"sneakers"}],["hoodie","hoodie",{t:"hoodie",c:1}],["tee","T-shirt",{t:"top",c:2,sleeve:"short"}],["jeans","jeans",{t:"pants",c:3}],["socks","socks",{t:"socks"}],["boxers","boxers",{t:"boxers",c:2}]]},
+    date:{name:"Date night",emoji:"🍷",pieces:[["shoes","dress shoes",{t:"dressshoes"}],["jacket","blazer",{t:"blazer",c:"#1a1a1a"}],["top","button-up",{t:"top",c:"#f6f2ee",sleeve:"long",collar:1,buttons:1}],["pants","slacks",{t:"pants",c:"#1a1a1a"}],["socks","socks",{t:"socks",c:"#1a1a1a"}],["boxers","boxers",{t:"boxers",c:"#7a2e3a"}]]},
+    fire:{name:"Firefighter",emoji:"🚒",pieces:[["hat","helmet",{t:"firehelmet"}],["jacket","turnout coat",{t:"coat",c:"#c9a227",stripes:1}],["shoes","boots",{t:"boots",c:"#111"}],["suspenders","suspenders",{t:"suspenders",c:"#b0123a"}],["pants","turnout pants",{t:"pants",c:"#c9a227",stripes:1}],["boxers","boxers",{t:"boxers",c:"#b0123a"}]]},
+    police:{name:"Officer",emoji:"👮‍♂️",pieces:[["hat","cap",{t:"policecap"}],["shades","shades",{t:"shades"}],["belt","belt and cuffs",{t:"belt",cuffs:1}],["top","uniform shirt",{t:"top",c:"#24345c",sleeve:"short",badge:1,collar:1,buttons:1}],["shoes","boots",{t:"boots",c:"#111"}],["pants","pants",{t:"pants",c:"#1b2744"}],["boxers","boxers",{t:"boxers",c:"#111"}]]},
+    doctor:{name:"Doctor",emoji:"🩺",pieces:[["stethoscope","stethoscope",{t:"stethoscope"}],["coat","white coat",{t:"coat",c:"#f6f2ee"}],["top","scrubs top",{t:"top",c:"#2f7f86",sleeve:"short"}],["shoes","sneakers",{t:"sneakers"}],["pants","scrubs pants",{t:"pants",c:"#2f7f86"}],["boxers","boxers",{t:"boxers",c:"#1f2a44"}]]},
+    builder:{name:"Construction",emoji:"🚧",pieces:[["hat","hard hat",{t:"hardhat"}],["vest","safety vest",{t:"vest",c:"#ff7a1a",stripes:1}],["top","tank top",{t:"top",c:"#f6f2ee",sleeve:"none"}],["shoes","work boots",{t:"boots",c:"#7a4a24"}],["jeans","jeans",{t:"pants",c:"#2b4a7a"}],["boxers","boxers",{t:"boxers",c:"#1a1a1a"}]]},
+    cowboy:{name:"Cowboy",emoji:"🤠",pieces:[["hat","hat",{t:"cowboyhat"}],["vest","vest",{t:"vest",c:"#5a3a22"}],["top","shirt",{t:"top",c:"#9c3b3b",sleeve:"long",collar:1,buttons:1}],["shoes","boots",{t:"boots",c:"#5a3a22"}],["jeans","jeans",{t:"pants",c:"#2b4a7a"}],["boxers","boxers",{t:"boxers",c:"#1a1a1a"}]]},
+    pilot:{name:"Pilot",emoji:"✈️",pieces:[["hat","cap",{t:"policecap",c:"#1a1a1a",gold:1}],["jacket","jacket",{t:"blazer",c:"#1a1a1a",gold:1}],["tie","tie",{t:"tie"}],["top","shirt",{t:"top",c:"#f6f2ee",sleeve:"short",collar:1,buttons:1}],["shoes","shoes",{t:"dressshoes"}],["pants","pants",{t:"pants",c:"#1a1a1a"}],["boxers","boxers",{t:"boxers",c:"#24345c"}]]}
+  }
+};
+function today_(){ return ymd(new Date()); }
+function avOf(k){ const A=(S.avatars||{})[k]||{}; return Object.assign({removed:[], round:0}, A, {look:Object.assign({}, AV_DEFAULT[k], A.look||{})}); }
+function costumeIdOf(k){ const A=avOf(k); return (A.costume && A.costume.night===today_() && COSTUMES[k][A.costume.id]) ? A.costume.id : "everyday"; }
+function piecesOf(k, id){ return COSTUMES[k][id||costumeIdOf(k)].pieces; }
+function removedOf(k){ const A=avOf(k); return A.night===today_() ? (A.removed||[]) : []; }
+function heartsOf(k){ return +(((S.hearts||{})[k])||0); }
+/* Balance: a full undress costs about what one of you earns in a good night (~18 cards) at your Game pace.
+   The first pieces are cheap, the last ones take real playing. */
+const GOOD_NIGHT = 18;
+function pieceCosts(k){
+  const P=piecesOf(k).length; let earn=0;
+  for(let n=1;n<=GOOD_NIGHT;n++) earn += HEARTS_PER_LEVEL[HEAT.indexOf(heatFor(n))]||1;
+  const total=Math.max(P, Math.round(earn/2)), w=Array.from({length:P},(_,i)=>1+i*0.6), sw=w.reduce((a,b)=>a+b,0);
+  const c=w.map(x=>Math.max(1,Math.round(total*x/sw))); const diff=total-c.reduce((a,b)=>a+b,0); c[P-1]=Math.max(1,c[P-1]+diff);
+  return c;
+}
+function shade(hex, f){ const n=parseInt(hex.slice(1,7),16); const r=Math.round(((n>>16)&255)*f), g=Math.round(((n>>8)&255)*f), b=Math.round((n&255)*f); return "#"+((1<<24)+(r<<16)+(g<<8)+b).toString(16).slice(1); }
+
+function avatarSVG(k, opts){
+  opts=opts||{};
+  const A=avOf(k), L=A.look, her=k==="a";
+  const cid=opts.costume||costumeIdOf(k), pieces=piecesOf(k,cid);
+  const gone=new Set(opts.removed||(opts.costume?[]:removedOf(k)));
+  const sk=SKIN[L.skin]||SKIN[3], skD=shade(sk,.82), hc=HAIRC[L.hairc]||HAIRC[0], hcL=shade(hc,1.6), ec=EYEC[L.eye]||EYEC[0];
+  const [sw,cw,ww,hw]=(SHAPES[k][L.shape]||Object.values(SHAPES[k])[0]);
+  const colorFor=sp=>typeof sp.c==="number" ? (CLOTHC[[L.c1,L.c2,L.c3][sp.c-1]]||CLOTHC[0]) : sp.c;
+  const X=v=>(100+v).toFixed(1), x=v=>(100-v).toFixed(1);
+  const SH=104, CH=134, WA=178, HP=214, CR=236, AN=408;
+  const torso=`M${x(sw)},${SH} Q${x(cw+3)},${CH} ${x(ww)},${WA} Q${x(hw+4)},${HP-12} ${x(hw)},${CR-6} L${X(hw)},${CR-6} Q${X(hw+4)},${HP-12} ${X(ww)},${WA} Q${X(cw+3)},${CH} ${X(sw)},${SH} Q100,${SH-9} ${x(sw)},${SH}Z`;
+  const leg=(s,e,bottom)=>{ const P=(dx,y)=>`${(100+s*dx).toFixed(1)},${y}`; bottom=bottom||AN; const kneeY=322;
+    const kneeIn=Math.max(2,6-e), kneeOut=hw*0.62+e, ankIn=Math.max(2,8-e), ankOut=hw*0.34+5+e;
+    if(bottom<=kneeY){ const t=(bottom-CR)/(kneeY-CR); return `M${P(hw+e,CR-10)} L${P(2,CR+4)} L${P(2+(kneeIn-2)*t,bottom)} L${P(hw+e-(hw+e-kneeOut)*t,bottom)} Z`; }
+    return `M${P(hw+e,CR-10)} L${P(2,CR+4)} L${P(kneeIn,kneeY)} L${P(ankIn,bottom)} L${P(ankOut,bottom)} L${P(kneeOut,kneeY)} Z`; };
+  const ankIn=8, ankOut=hw*0.34+5;
+  const armPath=s=>`M${(100+s*(sw-4)).toFixed(1)},${SH+4} Q${(100+s*(sw+11)).toFixed(1)},${SH+56} ${(100+s*(sw+8)).toFixed(1)},${SH+120}`;
+  const handX=s=>(100+s*(sw+8)).toFixed(1), handY=SH+124;
+  const p=[`<svg viewBox="0 0 200 440" role="img" aria-label="${opts.label||"Avatar"}" class="avsvg">`];
+  /* hair, back layer */
+  const hb={
+    long:`<path d="M72,54 Q70,14 100,14 Q130,14 128,54 L134,168 Q124,176 116,166 L114,96 L86,96 L84,166 Q76,176 66,168 Z" fill="${hc}"/>`,
+    braids:`<path d="M74,50 Q72,16 100,16 Q128,16 126,50 L130,96 L70,96 Z" fill="${hc}"/><g stroke="${hc}" stroke-width="5.5" stroke-linecap="round">${[70,76,82,118,124,130].map((v,i)=>`<path d="M${v},70 Q${v+(v<100?-4:4)},${130} ${v+(v<100?-2:2)},${186+(i%3)*6}"/>`).join("")}</g><g stroke="${hcL}" stroke-width="1" opacity=".35">${[70,82,118,130].map(v=>`<path d="M${v},90 L${v+(v<100?-3:3)},180"/>`).join("")}</g>`,
+    curls:`<g fill="${hc}">${[[70,64,14],[130,64,14],[66,86,13],[134,86,13],[72,106,12],[128,106,12],[80,122,10],[120,122,10]].map(([a,b,r])=>`<circle cx="${a}" cy="${b}" r="${r}"/>`).join("")}</g>`,
+    locs:`<g stroke="${hc}" stroke-width="6" stroke-linecap="round">${[72,79,86,114,121,128].map(v=>`<path d="M${v},44 Q${v+(v<100?-6:6)},90 ${v+(v<100?-3:3)},128"/>`).join("")}</g>`,
+    twists:`<g stroke="${hc}" stroke-width="5" stroke-linecap="round">${[76,84,92,100,108,116,124].map(v=>`<path d="M${v},26 L${v+(v<100?-3:v>100?3:0)},${v===100?14:18}"/>`).join("")}</g>`
+  };
+  if(hb[L.hair]) p.push(hb[L.hair]);
+  /* body */
+  p.push(`<g fill="${sk}"><path d="${leg(-1,0)}" stroke="${sk}" stroke-width="5" stroke-linejoin="round"/><path d="${leg(1,0)}" stroke="${sk}" stroke-width="5" stroke-linejoin="round"/><path d="${torso}"/><path d="M92,78 L108,78 L110,${SH+2} L90,${SH+2}Z"/></g>`);
+  p.push(`<path d="M${X(sw-6)},${SH+6} Q${X(cw+2)},${CH} ${X(ww-2)},${WA} Q${X(hw+2)},${HP-12} ${X(hw-3)},${CR-8} L${X(hw-10)},${CR-8} Q${X(ww-8)},${HP-20} ${X(ww-8)},${WA} Q${X(cw-6)},${CH} ${X(sw-12)},${SH+8}Z" fill="${skD}" opacity=".45"/>`);
+  p.push(`<path d="M92,${SH-12} Q100,${SH-4} 108,${SH-12} L108,${SH-6} Q100,${SH} 92,${SH-6}Z" fill="${skD}" opacity=".6"/>`);
+  p.push(`<g stroke="${sk}" stroke-width="12" stroke-linecap="round" fill="none"><path d="${armPath(-1)}"/><path d="${armPath(1)}"/></g><g fill="${sk}"><ellipse cx="${handX(-1)}" cy="${handY}" rx="6.5" ry="8"/><ellipse cx="${handX(1)}" cy="${handY}" rx="6.5" ry="8"/></g>`);
+  p.push(`<path d="${armPath(1)}" stroke="${skD}" stroke-width="4" fill="none" opacity=".35" transform="translate(3,0)"/>`);
+  if(her) p.push(`<g fill="none" stroke="${skD}" stroke-width="1.6" opacity=".9"><path d="M${x(cw-6)},${CH+8} Q${x(cw/2)},${CH+20} ${x(3)},${CH+8}"/><path d="M${X(3)},${CH+8} Q${X(cw/2)},${CH+20} ${X(cw-6)},${CH+8}"/></g><path d="M100,${WA-6} l0,4" stroke="${skD}" stroke-width="1.6"/>`);
+  else p.push(`<g fill="none" stroke="${skD}" stroke-width="1.6" opacity=".85"><path d="M${x(cw-8)},${CH-2} Q${x(cw/2)},${CH+8} ${x(2)},${CH-2}"/><path d="M${X(2)},${CH-2} Q${X(cw/2)},${CH+8} ${X(cw-8)},${CH-2}"/><path d="M100,${CH+6} L100,${WA+4}"/><path d="M${x(10)},${CH+24} L${X(10)},${CH+24}" opacity=".6"/><path d="M${x(10)},${CH+38} L${X(10)},${CH+38}" opacity=".6"/></g>`);
+  /* head: anime face with a soft pointed chin */
+  p.push(her ? `<path d="M78,52 Q78,24 100,24 Q122,24 122,52 Q122,70 112,80 Q104,88 100,89 Q96,88 88,80 Q78,70 78,52Z" fill="${sk}"/>`
+             : `<path d="M77,50 Q77,23 100,23 Q123,23 123,50 Q124,70 116,82 Q108,90 100,90 Q92,90 84,82 Q76,70 77,50Z" fill="${sk}"/>`);
+  p.push(`<path d="M114,50 Q122,58 116,74 Q110,84 102,88 Q112,80 114,66Z" fill="${skD}" opacity=".45"/>`);
+  p.push(`<g><ellipse cx="78" cy="58" rx="3" ry="5" fill="${sk}"/><ellipse cx="122" cy="58" rx="3" ry="5" fill="${sk}"/></g>`);
+  const eye=(cx,flip)=>{ const s=flip?-1:1;
+    return `<path d="M${cx-8},58 Q${cx},${her?50:52} ${cx+8},57 Q${cx+6},64 ${cx},65 Q${cx-6},64 ${cx-8},58Z" fill="#fffaf6"/>`+
+      `<ellipse cx="${cx}" cy="59.5" rx="4.6" ry="5.6" fill="${ec}"/><ellipse cx="${cx}" cy="60.5" rx="2.4" ry="3" fill="#120c0a"/>`+
+      `<ellipse cx="${cx}" cy="57" rx="4.6" ry="2.4" fill="#00000033"/><circle cx="${cx+1.8*s}" cy="57" r="1.6" fill="#fff"/><circle cx="${cx-1.6*s}" cy="62.4" r=".9" fill="#fff"/>`+
+      `<path d="M${cx-9},58 Q${cx},${her?48.5:51} ${cx+9},56.5" stroke="#120c0a" stroke-width="${her?2.6:2.2}" fill="none" stroke-linecap="round"/>`+
+      (her?`<path d="M${cx+9*s},56.5 l${3*s},-2.6" stroke="#120c0a" stroke-width="1.8" stroke-linecap="round"/>`:"")+
+      `<path d="M${cx-8},${her?47:48} Q${cx},${her?44:45} ${cx+8},${her?46.5:47.5}" stroke="${shade(hc,.9)}" stroke-width="${her?1.6:2.4}" fill="none" stroke-linecap="round"/>`; };
+  p.push(eye(90,true), eye(110,false));
+  p.push(`<path d="M100,63 Q99,70 97.5,72" stroke="${skD}" stroke-width="1.3" fill="none" stroke-linecap="round"/>`);
+  p.push(her ? `<path d="M95,78 Q100,81.5 105,78 Q100,80 95,78Z" fill="#b5395e"/><path d="M95.5,78 Q100,76 104.5,78" stroke="#b5395e" stroke-width="1" fill="none"/><g fill="#ff7aa0" opacity=".25"><ellipse cx="85" cy="69" rx="5" ry="2.6"/><ellipse cx="115" cy="69" rx="5" ry="2.6"/></g>`
+             : `<path d="M95,78.5 Q100,81 105,78" stroke="#5a2a1a" stroke-width="1.6" fill="none" stroke-linecap="round"/><path d="M84,70 Q86,84 100,89 Q114,84 116,70 Q114,80 100,84 Q86,80 84,70Z" fill="${hc}" opacity=".55"/>`);
+  /* hair, front layer */
+  const hf={
+    long:`<path d="M77,52 Q76,20 100,19 Q124,20 123,52 Q116,36 108,34 Q104,44 92,44 Q96,38 94,34 Q84,38 77,52Z" fill="${hc}"/><path d="M84,28 Q98,22 114,28" stroke="${hcL}" stroke-width="2" fill="none" opacity=".5"/>`,
+    braids:`<path d="M78,48 Q78,20 100,19 Q122,20 122,48 Q112,34 100,32 Q88,34 78,48Z" fill="${hc}"/><g stroke="${hcL}" stroke-width="1" opacity=".4"><path d="M88,24 L92,36"/><path d="M100,20 L100,32"/><path d="M112,24 L108,36"/></g>`,
+    afro:`<g fill="${hc}"><circle cx="100" cy="24" r="22"/><circle cx="80" cy="34" r="12"/><circle cx="120" cy="34" r="12"/></g><path d="M78,48 Q80,30 100,30 Q120,30 122,48 Q110,38 100,38 Q90,38 78,48Z" fill="${hc}"/><path d="M88,12 Q100,6 112,12" stroke="${hcL}" stroke-width="2" fill="none" opacity=".45"/>`,
+    bun:`<circle cx="100" cy="14" r="12" fill="${hc}"/><path d="M78,48 Q78,22 100,21 Q122,22 122,48 Q114,34 100,33 Q86,34 78,48Z" fill="${hc}"/><path d="M90,10 Q100,4 110,10" stroke="${hcL}" stroke-width="2" fill="none" opacity=".5"/>`,
+    curls:`<g fill="${hc}">${[[82,30,11],[94,22,12],[108,22,12],[119,31,11],[76,44,9],[124,44,9]].map(([a,b,r])=>`<circle cx="${a}" cy="${b}" r="${r}"/>`).join("")}</g>`,
+    fade:`<path d="M79,46 Q80,24 100,23 Q120,24 121,46 Q112,32 100,32 Q88,32 79,46Z" fill="${hc}"/><path d="M79,46 L79,58" stroke="${hc}" stroke-width="2" opacity=".4"/><path d="M121,46 L121,58" stroke="${hc}" stroke-width="2" opacity=".4"/>`,
+    waves:`<path d="M78,48 Q79,22 100,21 Q121,22 122,48 Q112,32 100,32 Q88,32 78,48Z" fill="${hc}"/><g stroke="${hcL}" stroke-width="1.4" fill="none" opacity=".55"><path d="M86,30 Q100,24 114,30"/><path d="M84,36 Q100,30 116,36"/></g>`,
+    locs:`<path d="M78,48 Q78,22 100,21 Q122,22 122,48 Q112,32 100,32 Q88,32 78,48Z" fill="${hc}"/><g stroke="${hc}" stroke-width="5" stroke-linecap="round"><path d="M86,32 Q82,42 80,50"/><path d="M114,32 Q118,42 120,50"/></g>`,
+    twists:`<path d="M78,46 Q79,22 100,21 Q121,22 122,46 Q112,32 100,32 Q88,32 78,46Z" fill="${hc}"/>`,
+    bald:`<path d="M84,30 Q100,22 116,30" stroke="#ffffff" stroke-width="2" fill="none" opacity=".25"/>`
+  };
+  if(hf[L.hair]) p.push(hf[L.hair]);
+  /* clothes, inside out (reverse of removal order) */
+  const on=pieces.filter(([key])=>!gone.has(key));
+  const draw=[...on].reverse();
+  const legsCover=(col,bottom,e)=>`<g fill="${col}" stroke="${col}" stroke-width="5" stroke-linejoin="round"><path d="M${x(ww+1)},${WA} L${X(ww+1)},${WA} Q${X(hw+5)},${HP-12} ${X(hw+2)},${CR-6} L100,${CR+10} L${x(hw+2)},${CR-6} Q${x(hw+5)},${HP-12} ${x(ww+1)},${WA}Z"/><path d="${leg(-1,e||2,bottom)}"/><path d="${leg(1,e||2,bottom)}"/></g>`;
+  const top=(col,bottom,sleeve,extra)=>{ let s=`<path d="M${x(sw+1)},${SH} Q${x(cw+4)},${CH} ${x(ww+1)},${bottom} L${X(ww+1)},${bottom} Q${X(cw+4)},${CH} ${X(sw+1)},${SH} Q100,${SH+(extra&&extra.v?16:8)} ${x(sw+1)},${SH}Z" fill="${col}"/>`;
+    if(sleeve==="short") s+=`<g stroke="${col}" stroke-width="15" stroke-linecap="round"><path d="M${x(sw-4)},${SH+5} L${x(sw+9)},${SH+34}"/><path d="M${X(sw-4)},${SH+5} L${X(sw+9)},${SH+34}"/></g>`;
+    if(sleeve==="long") s+=`<g stroke="${col}" stroke-width="15" stroke-linecap="round" fill="none"><path d="M${x(sw-4)},${SH+5} Q${x(sw+11)},${SH+56} ${x(sw+8)},${SH+112}"/><path d="M${X(sw-4)},${SH+5} Q${X(sw+11)},${SH+56} ${X(sw+8)},${SH+112}"/></g>`;
+    s+=`<path d="M${X(sw-8)},${SH+8} Q${X(cw)},${CH} ${X(ww-4)},${bottom-2}" stroke="#00000022" stroke-width="7" fill="none"/>`;
+    return s; };
+  const shoe=(col,kind)=>{ const L1=x(ankOut+2), L2=x(ankIn-2), R1=X(ankIn-2), R2=X(ankOut+2); const y=AN-6;
+    if(kind==="heels") return `<g fill="${col}"><path d="M${L1},${y} L${L2},${y} L${x(ankIn-3)},${y+16} L${x(ankOut+7)},${y+16}Z"/><path d="M${R1},${y} L${R2},${y} L${X(ankOut+7)},${y+16} L${X(ankIn-3)},${y+16}Z"/><rect x="${x(ankOut+7)}" y="${y+14}" width="3" height="12"/><rect x="${X(ankOut+4)}" y="${y+14}" width="3" height="12"/></g>`;
+    if(kind==="boots") return `<g fill="${col}"><path d="M${x(ankOut+3)},${y-34} L${x(ankIn-3)},${y-34} L${x(ankIn-4)},${y+18} L${x(ankOut+12)},${y+18} Q${x(ankOut+12)},${y+6} ${x(ankOut+3)},${y}Z"/><path d="M${X(ankIn-3)},${y-34} L${X(ankOut+3)},${y-34} L${X(ankOut+3)},${y} Q${X(ankOut+12)},${y+6} ${X(ankOut+12)},${y+18} L${X(ankIn-4)},${y+18}Z"/></g>`;
+    const fill=kind==="dress"?"#1a1a1a":"#f7f4ef", st=kind==="dress"?"#000":"#163024";
+    return `<g fill="${fill}" stroke="${st}" stroke-width="1.2"><path d="M${L1},${y} L${L2},${y} L${x(ankIn-4)},${y+18} L${x(ankOut+12)},${y+18} Q${x(ankOut+12)},${y+6} ${L1},${y}Z"/><path d="M${R1},${y} L${R2},${y} Q${X(ankOut+12)},${y+6} ${X(ankOut+12)},${y+18} L${X(ankIn-4)},${y+18}Z"/></g>`; };
+  const heartsCover=[];
+  for(const [key,label,sp] of draw){
+    const col=colorFor(sp);
+    switch(sp.t){
+      case "panties": p.push(`<path d="M${x(hw-3)},${CR-14} L${X(hw-3)},${CR-14} L${X(hw*0.28)},${CR+2} Q100,${CR+16} ${x(hw*0.28)},${CR+2}Z" fill="${col}"/>${sp.lace?`<path d="M${x(hw-3)},${CR-14} L${X(hw-3)},${CR-14}" stroke="#ffffff55" stroke-width="2" stroke-dasharray="2 2"/>`:""}`); break;
+      case "boxers": p.push(`<g fill="${col}" stroke="${col}" stroke-width="4" stroke-linejoin="round"><path d="M${x(hw)},${CR-20} L${X(hw)},${CR-20} L${X(hw+2)},${CR-6} L100,${CR+10} L${x(hw+2)},${CR-6}Z"/><path d="${leg(-1,2,CR+46)}"/><path d="${leg(1,2,CR+46)}"/></g><path d="M${x(hw)},${CR-18} L${X(hw)},${CR-18}" stroke="#ffffff55" stroke-width="3"/>`); break;
+      case "bra": p.push(`<g fill="${col}"><path d="M${x(cw-2)},${CH+2} Q${x(cw/2)},${CH+26} ${x(2)},${CH+8} Q${x(cw/2)},${CH-6} ${x(cw-2)},${CH+2}Z"/><path d="M${X(2)},${CH+8} Q${X(cw/2)},${CH+26} ${X(cw-2)},${CH+2} Q${X(cw/2)},${CH-6} ${X(2)},${CH+8}Z"/></g><g stroke="${col}" stroke-width="1.8"><path d="M${x(sw-8)},${SH+2} L${x(cw-4)},${CH+2}"/><path d="M${X(sw-8)},${SH+2} L${X(cw-4)},${CH+2}"/></g>${sp.lace?`<g stroke="#ffffff55" stroke-width="1.4" fill="none" stroke-dasharray="1.5 2"><path d="M${x(cw-2)},${CH+2} Q${x(cw/2)},${CH-6} ${x(2)},${CH+8}"/><path d="M${X(2)},${CH+8} Q${X(cw/2)},${CH-6} ${X(cw-2)},${CH+2}"/></g>`:""}`); break;
+      case "corset": p.push(`<path d="M${x(cw+1)},${CH} Q${x(cw/2)},${CH+18} 100,${CH+8} Q${X(cw/2)},${CH+18} ${X(cw+1)},${CH} L${X(ww+2)},${WA+10} Q${X(hw+2)},${HP} ${X(hw)},${CR-12} L${x(hw)},${CR-12} Q${x(hw+2)},${HP} ${x(ww+2)},${WA+10}Z" fill="${col}"/><g stroke="#f4a6bf" stroke-width="1" opacity=".7"><path d="M96,${CH+14} L104,${CH+22}"/><path d="M104,${CH+14} L96,${CH+22}"/><path d="M96,${CH+30} L104,${CH+38}"/><path d="M104,${CH+30} L96,${CH+38}"/></g>`); break;
+      case "socks": p.push(`<g fill="${sp.c||"#f2efe9"}"><rect x="${x(ankOut+1)}" y="${AN-34}" width="${(ankOut-ankIn+2).toFixed(1)}" height="30" rx="3"/><rect x="${X(ankIn-1)}" y="${AN-34}" width="${(ankOut-ankIn+2).toFixed(1)}" height="30" rx="3"/></g>`); break;
+      case "stockings": p.push(`<g fill="${col}" ${sp.net?`stroke="#000" stroke-width=".6" stroke-dasharray="1 2"`:""}><path d="${leg(-1,0.5,AN-4)}"/><path d="${leg(1,0.5,AN-4)}"/></g><g stroke="#111" stroke-width="2" opacity=".5"><path d="M${x(hw*0.66+1)},300 L${x(4)},300"/><path d="M${X(4)},300 L${X(hw*0.66+1)},300"/></g>`); break;
+      case "pants": p.push(legsCover(col,AN-6,2)+(sp.stripes?`<g stroke="#e8e8e8" stroke-width="3"><path d="M${x(hw*0.5+4)},350 L${x(5)},350"/><path d="M${X(5)},350 L${X(hw*0.5+4)},350"/></g>`:"")); break;
+      case "skirt": { const len=sp.len||250; p.push(sp.pencil ? legsCover(col,len,4).replace(/<path d="M[^"]*Z"\/><path d="M[^"]*Z"\/><\/g>$/,"")+`<path d="M${x(ww+1)},${WA} L${X(ww+1)},${WA} Q${X(hw+6)},${HP} ${X(hw*0.85)},${len} L${x(hw*0.85)},${len} Q${x(hw+6)},${HP} ${x(ww+1)},${WA}Z" fill="${col}"/>`
+        : `<path d="M${x(ww+1)},${WA} L${X(ww+1)},${WA} Q${X(hw+8)},${HP} ${X(hw+12)},${len} L${x(hw+12)},${len} Q${x(hw+8)},${HP} ${x(ww+1)},${WA}Z" fill="${col}"/><path d="M${x(hw+12)},${len} L${X(hw+12)},${len}" stroke="#00000033" stroke-width="2"/>`); break; }
+      case "dress": { const len=sp.len||260; p.push(top(col,WA+4,"none")+`<path d="M${x(ww+1)},${WA} L${X(ww+1)},${WA} Q${X(hw+8)},${HP} ${X(hw+12)},${len} L${x(hw+12)},${len} Q${x(hw+8)},${HP} ${x(ww+1)},${WA}Z" fill="${col}"/>`+
+        `<g stroke="${col}" stroke-width="3"><path d="M${x(sw-9)},${SH} L${x(cw-6)},${CH-4}"/><path d="M${X(sw-9)},${SH} L${X(cw-6)},${CH-4}"/></g>`+
+        (sp.collar?`<path d="M90,${SH-2} L100,${SH+10} L110,${SH-2}" stroke="#ffffff" stroke-width="3" fill="none"/>`:"")+
+        (sp.cross?`<g fill="#d33"><rect x="${X(cw/2)-1}" y="${CH-14}" width="3" height="10"/><rect x="${X(cw/2)-4.5}" y="${CH-10.5}" width="10" height="3"/></g>`:"")); break; }
+      case "top": p.push(top(col, sp.sleeve==="none"?WA+2:WA+6, sp.sleeve, {})+(sp.collar?`<path d="M90,${SH-2} L100,${SH+12} L110,${SH-2}" stroke="${shade(col.length>7?col.slice(0,7):col,.8)}" stroke-width="3" fill="none"/>`:"")+(sp.buttons?`<g fill="#00000055">${[0,1,2,3].map(i=>`<circle cx="100" cy="${SH+18+i*16}" r="1.4"/>`).join("")}</g>`:"")+(sp.badge?`<path d="M${x(cw/2)},${CH-14} l4,-3 4,3 -1,7 -3,2 -3,-2Z" fill="#d9b44a"/>`:"")+(sp.sleeve==="none"?"":"")); break;
+      case "hoodie": p.push(top(col,WA+18,"long")+`<path d="M${x(14)},${CH+30} L${X(14)},${CH+30} L${X(12)},${CH+52} L${x(12)},${CH+52}Z" fill="#00000026"/><path d="M76,${SH-2} Q100,${SH+18} 124,${SH-2}" stroke="${shade(col,.8)}" stroke-width="5" fill="none"/><g stroke="#ffffffaa" stroke-width="1.6"><path d="M96,${SH+6} L95,${SH+34}"/><path d="M104,${SH+6} L105,${SH+34}"/></g>`); break;
+      case "jacket": case "blazer": case "coat": { const bot = sp.t==="coat" ? 300 : sp.t==="blazer" ? WA+26 : WA+14;
+        p.push(`<g fill="${col}"><path d="M${x(sw+2)},${SH} Q${x(cw+6)},${CH} ${x(ww+4)},${bot} L${x(8)},${bot} L${x(5)},${SH+10}Z"/><path d="M${X(sw+2)},${SH} Q${X(cw+6)},${CH} ${X(ww+4)},${bot} L${X(8)},${bot} L${X(5)},${SH+10}Z"/></g>`+
+          `<g stroke="${col}" stroke-width="16" stroke-linecap="round" fill="none"><path d="M${x(sw-4)},${SH+5} Q${x(sw+11)},${SH+56} ${x(sw+8)},${SH+108}"/><path d="M${X(sw-4)},${SH+5} Q${X(sw+11)},${SH+56} ${X(sw+8)},${SH+108}"/></g>`+
+          `<g stroke="${shade(col.slice(0,7),.7)}" stroke-width="2" fill="none"><path d="M${x(5)},${SH+10} L${x(14)},${CH+8}"/><path d="M${X(5)},${SH+10} L${X(14)},${CH+8}"/></g>`+
+          (sp.stripes?`<g stroke="#e8e8e8" stroke-width="4"><path d="M${x(ww+4)},${bot-30} L${x(8)},${bot-30}"/><path d="M${X(8)},${bot-30} L${X(ww+4)},${bot-30}"/></g>`:"")+
+          (sp.gold?`<g stroke="#d9b44a" stroke-width="2.5"><path d="M${x(sw+9)},${SH+96} L${x(sw+5)},${SH+102}"/><path d="M${X(sw+9)},${SH+96} L${X(sw+5)},${SH+102}"/></g>`:"")); break; }
+      case "vest": p.push(`<g fill="${col}"><path d="M${x(sw-2)},${SH+2} Q${x(cw+4)},${CH} ${x(ww+3)},${WA+12} L${x(7)},${WA+12} L${x(4)},${SH+12}Z"/><path d="M${X(sw-2)},${SH+2} Q${X(cw+4)},${CH} ${X(ww+3)},${WA+12} L${X(7)},${WA+12} L${X(4)},${SH+12}Z"/></g>`+(sp.stripes?`<g stroke="#e8e8e8" stroke-width="4"><path d="M${x(cw+2)},${CH+16} L${x(7)},${CH+16}"/><path d="M${X(7)},${CH+16} L${X(cw+2)},${CH+16}"/></g>`:"")); break;
+      case "apron": p.push(`<path d="M${x(cw-6)},${CH-6} L${X(cw-6)},${CH-6} L${X(ww-2)},${WA} Q${X(hw+4)},${HP} ${X(hw+4)},${240} L${x(hw+4)},${240} Q${x(hw+4)},${HP} ${x(ww-2)},${WA}Z" fill="#fbf8f4"/><path d="M${x(ww+2)},${WA} L${X(ww+2)},${WA}" stroke="#fbf8f4" stroke-width="5"/><path d="M${x(hw+4)},240 Q100,246 ${X(hw+4)},240" stroke="#e8dcd0" stroke-width="2" fill="none"/>`); break;
+      case "suspenders": p.push(`<g stroke="${col}" stroke-width="4"><path d="M${x(sw-8)},${SH+2} L${x(12)},${WA+4}"/><path d="M${X(sw-8)},${SH+2} L${X(12)},${WA+4}"/></g>`); break;
+      case "belt": p.push(`<rect x="${x(ww+3)}" y="${WA-2}" width="${(2*ww+6).toFixed(1)}" height="7" fill="#111"/><rect x="96" y="${WA-2}" width="8" height="7" fill="#d9b44a"/>${sp.cuffs?`<g fill="none" stroke="#c9c9c9" stroke-width="2"><circle cx="${X(ww-2)}" cy="${WA+10}" r="4"/><circle cx="${X(ww-9)}" cy="${WA+10}" r="4"/></g>`:""}`); break;
+      case "tie": p.push(`<path d="M97,${SH+4} L103,${SH+4} L105,${SH+50} L100,${SH+58} L95,${SH+50}Z" fill="#1a1a1a"/>`); break;
+      case "scarf": p.push(`<path d="M86,${SH-4} Q100,${SH+8} 114,${SH-4} L112,${SH+4} Q100,${SH+14} 88,${SH+4}Z" fill="${col}"/><path d="M106,${SH+6} L114,${SH+22} L106,${SH+20}Z" fill="${col}"/>`); break;
+      case "bowtie": p.push(`<rect x="88" y="${SH-12}" width="24" height="5" rx="2" fill="#fbf8f4"/><path d="M92,${SH-10} L100,${SH-6} L92,${SH-2}Z M108,${SH-10} L100,${SH-6} L108,${SH-2}Z" fill="#111"/>`); break;
+      case "stethoscope": p.push(`<path d="M86,${SH} Q84,${SH+40} 100,${SH+44} Q116,${SH+40} 114,${SH}" stroke="#444" stroke-width="2.4" fill="none"/><circle cx="100" cy="${SH+48}" r="4.5" fill="#c9c9c9" stroke="#444"/>`); break;
+      case "glasses": p.push(`<g fill="none" stroke="#111" stroke-width="1.6"><rect x="81" y="53" width="17" height="12" rx="4"/><rect x="102" y="53" width="17" height="12" rx="4"/><path d="M98,58 L102,58"/></g>`); break;
+      case "shades": p.push(`<g fill="#111"><path d="M80,54 L98,54 L96,64 Q88,67 82,62Z"/><path d="M102,54 L120,54 L118,62 Q112,67 104,64Z"/><rect x="97" y="55" width="6" height="2"/></g>`); break;
+      case "heels": p.push(shoe(col,"heels")); break;
+      case "boots": p.push(shoe(col,"boots")); break;
+      case "sneakers": p.push(shoe(col,"sneakers")); break;
+      case "dressshoes": p.push(shoe(col,"dress")); break;
+      case "nursecap": p.push(`<path d="M86,26 L114,26 L110,14 L90,14Z" fill="#fbf8f4" stroke="#e5ddd4"/><g fill="#d33"><rect x="98.5" y="16" width="3" height="8"/><rect x="96" y="18.5" width="8" height="3"/></g>`); break;
+      case "policecap": { const cc=sp.c||"#24345c"; p.push(`<path d="M76,34 Q100,8 124,34 Z" fill="${cc}"/><path d="M76,34 Q100,42 124,34 L126,38 Q100,46 74,38Z" fill="#111"/><path d="M95,20 l5,-4 5,4 -1,6 -4,2 -4,-2Z" fill="#d9b44a"/>${sp.gold?`<path d="M80,32 L120,32" stroke="#d9b44a" stroke-width="2"/>`:""}`); break; }
+      case "firehelmet": p.push(`<path d="M74,38 Q74,8 100,8 Q126,8 126,38Z" fill="#c4161c"/><path d="M68,38 Q100,46 132,38 L130,42 Q100,50 70,42Z" fill="#9e1015"/><path d="M94,16 l6,-4 6,4 0,10 -12,0Z" fill="#d9b44a"/>`); break;
+      case "hardhat": p.push(`<path d="M76,38 Q76,10 100,10 Q124,10 124,38Z" fill="#f4c20d"/><path d="M70,38 L130,38 L130,42 L70,42Z" fill="#d9a700"/><path d="M100,12 L100,36" stroke="#d9a700" stroke-width="4"/>`); break;
+      case "cowboyhat": p.push(`<path d="M80,32 Q80,8 100,10 Q120,8 120,32Z" fill="#7a4a24"/><path d="M58,34 Q100,48 142,34 Q136,44 100,44 Q64,44 58,34Z" fill="#6a3e1c"/><path d="M80,30 L120,30" stroke="#3a2210" stroke-width="3"/>`); break;
+      case "pillbox": p.push(`<rect x="84" y="16" width="26" height="12" rx="3" fill="${col}" transform="rotate(-8 97 22)"/>`); break;
+      case "maidband": p.push(`<path d="M78,32 Q100,18 122,32" stroke="#fbf8f4" stroke-width="6" fill="none"/><g fill="#fbf8f4">${[84,92,100,108,116].map((v,i)=>`<circle cx="${v}" cy="${i===2?20:i%2?22:27}" r="3.4"/>`).join("")}</g>`); break;
+      case "bunnyears": p.push(`<g fill="#111"><path d="M86,30 Q74,-14 86,-18 Q96,-14 94,28Z"/><path d="M114,30 Q126,-14 114,-18 Q104,-14 106,28Z"/></g><g fill="#f4a6bf"><path d="M87,24 Q80,-6 86,-10 Q91,-6 91,24Z"/><path d="M113,24 Q120,-6 114,-10 Q109,-6 109,24Z"/></g>`); break;
+    }
+  }
+  /* teasing: once everything's off, little hearts cover up */
+  if(pieces.every(([key])=>gone.has(key))){
+    const hz=(cx,cy,s)=>`<path transform="translate(${(cx-13*s).toFixed(1)},${(cy-12*s).toFixed(1)}) scale(${s})" d="M13 22 C4 15 1 10 1 6.5 A5.5 5.5 0 0 1 13 4 A5.5 5.5 0 0 1 25 6.5 C25 10 22 15 13 22Z" fill="#e0609a" stroke="#fdf3f5" stroke-width="1.2"/>`;
+    if(her) p.push(hz(100-cw/2,CH+12,0.95), hz(100+cw/2,CH+12,0.95));
+    p.push(hz(100,CR-2,1.2));
+  }
+  p.push(`</svg>`);
+  return p.join("");
+}
+function avatarEl(k, opts){ const d=$("div",{class:"avwrap"+(opts&&opts.small?" small":"")}); d.innerHTML=avatarSVG(k,opts); return d; }
+/* ---------- hearts, undressing, coupons ---------- */
+/* ---------- hearts, undressing, coupons ---------- */
+const HEARTS_PER_LEVEL = [1,2,3,3];
+function award(k, n, why){
+  S.hearts = Object.assign({}, S.hearts||{}, {[k]: heartsOf(k)+n});
+  save("hearts",[k]);
+  if(k===me) toast(`+${n} ♥${why?" "+why:""}`);
+}
+function pieceName(k,i){ return (piecesOf(k)[i]||[])[1]||""; }
+function hisHer(k){ return k==="b" ? "his" : "her"; }
+function himHer(k){ return k==="b" ? "him" : "her"; }
+function couponsOf(k){ const c=(S.coupons||{})[k]||{}; return {list:c.list||[], owed:c.owed||0}; }
+function setAv(k, patch){ S.avatars=Object.assign({}, S.avatars||{}, {[k]: Object.assign({}, (S.avatars||{})[k]||{}, patch)}); save("avatars",[k]); }
+function undress(){
+  const t=other(me), P=piecesOf(t), rem=removedOf(t), i=rem.length;
+  if(i>=P.length) return;
+  const cost=pieceCosts(t)[i];
+  if(heartsOf(me)<cost){ toast(`You need ${cost-heartsOf(me)} more \u2665`); return; }
+  S.hearts=Object.assign({}, S.hearts||{}, {[me]: heartsOf(me)-cost}); save("hearts",[me]);
+  const removed=rem.concat(P[i][0]);
+  setAv(t, {removed, night:today_(), round:avOf(t).night===today_()?(avOf(t).round||0):0});
+  try{ navigator.vibrate && navigator.vibrate(40); }catch(e){}
+  if(removed.length===P.length) winReward(t); else render();
+}
+function pickCostume(t, id){
+  setAv(t, {costume:{id, night:today_(), by:me}, removed:[], night:today_(), round:0});
+  toast(`${nm(t)} is wearing ${COSTUMES[t][id].name} tonight \ud83d\ude0f`); render();
+}
+function winReward(t){
+  const C=couponsOf(t), open=C.list.filter(c=>!c.claimedBy);
+  let won=null;
+  if(open.length){ won=open[Math.floor(Math.random()*open.length)]; won=Object.assign({},won,{claimedBy:me,claimedAt:Date.now()}); C.list=C.list.map(c=>c.id===won.id?won:c); }
+  else C.owed=(C.owed||0)+1;
+  S.coupons=Object.assign({}, S.coupons||{}, {[t]:C}); save("coupons",[t]);
+  showMoment("🔥", "Fully undressed", `You undressed ${nm(t)}`, won ? `You won: “${won.text}”` : `${nm(t)} hasn't written any coupons yet, so ${nm(t)} owes you one. The next one ${t==="b"?"he":"she"} writes is yours.`, 6000);
+  render();
+}
+function redress(){
+  const t=other(me), A=avOf(t);
+  setAv(t, {removed:[], night:today_(), round:(A.night===today_()?(A.round||0):0)+1}); render();
+}
+function addCoupon(text){
+  const C=couponsOf(me), item={id:Date.now().toString(36), text:text.slice(0,120), at:Date.now()};
+  if(C.owed>0){ item.claimedBy=other(me); item.claimedAt=Date.now(); C.owed--; toast(`${nm(other(me))} was owed one, so this one's theirs 😏`); }
+  C.list=C.list.concat(item);
+  S.coupons=Object.assign({}, S.coupons||{}, {[me]:C}); save("coupons",[me]); render();
+}
+function removeCoupon(id){ const C=couponsOf(me); C.list=C.list.filter(c=>c.id!==id); S.coupons=Object.assign({}, S.coupons||{}, {[me]:C}); save("coupons",[me]); render(); }
+function cashIn(id){
+  const t=other(me), C=couponsOf(t); C.list=C.list.map(c=>c.id===id?Object.assign({},c,{used:Date.now()}):c);
+  S.coupons=Object.assign({}, S.coupons||{}, {[t]:C}); save("coupons",[t]); toast("Cashed in. Go collect 😏"); render();
+}
+/* Full-screen moment (shared with level-ups). */
+function showMoment(emoji, eyebrow, name, line, ms){
+  const el=document.getElementById("lvlUp"); if(!el) return;
+  el.innerHTML="";
+  el.append($("div",{class:"lu-emoji",text:emoji}),$("div",{class:"eyebrow",text:eyebrow}),$("div",{class:"lu-name",text:name}),line?$("div",{class:"lu-line",text:line}):"",$("div",{class:"muted",style:"font-size:12px;margin-top:10px",text:"Tap to close"}));
+  el.hidden=false; el.classList.remove("show"); void el.offsetWidth; el.classList.add("show");
+  clearTimeout(checkLevelUp.t); checkLevelUp.t=setTimeout(()=>{ el.hidden=true; }, ms||2600);
+  el.onclick=()=>{ el.hidden=true; };
+}
+/* When your partner takes something off your avatar, or cashes in, let you know. */
+function checkAvatarNews(){
+  if(!me || !room_ok()) return;
+  const A=avOf(me), rem=removedOf(me), seen=lsGet("ftl_seen_av",null);
+  const now={night:today_(), round:A.round||0, n:rem.length, costume:costumeIdOf(me)};
+  if(seen && seen.night===now.night){
+    if(now.costume!==seen.costume && A.costume && A.costume.by===other(me)) showMoment(COSTUMES[me][now.costume].emoji,`${nm(other(me))} picked your costume`,COSTUMES[me][now.costume].name,"That's what you're wearing tonight \ud83d\ude0f",3200);
+    else if(now.round===seen.round && now.n>seen.n){
+      if(now.n===piecesOf(me).length) showMoment("\ud83d\ude33","Uh oh",`${nm(other(me))} undressed you`,"Every last piece. Pay up \ud83d\ude0f",4000);
+      else toast(`${nm(other(me))} took off your ${pieceName(me, now.n-1)} \ud83d\ude0f`);
+      try{ navigator.vibrate && navigator.vibrate([80,60,80]); }catch(e){}
+    }
+  }
+  lsSet("ftl_seen_av", now);
+}
+
+/* Costume picker: you pick what your partner wears tonight. */
+let pickingCostume=false;
+function costumePicker(t){
+  const cur=costumeIdOf(t), started=removedOf(t).length>0;
+  return $("div",{class:"form"},
+    $("h3",{style:"font-size:20px",text:`Pick ${nm(t)}'s costume for tonight`}),
+    $("p",{class:"muted",style:"margin:0;font-size:13px",text: started ? `You've already started taking ${hisHer(t)} ${COSTUMES[t][cur].name.toLowerCase()} outfit off. A new costume puts ${himHer(t)} back fully dressed.` : `${nm(t)} gets a heads-up when you pick.`}),
+    $("div",{class:"costumes"}, Object.entries(COSTUMES[t]).map(([id,c])=>$("button",{class:"costume","aria-pressed":String(cur===id),onclick:()=>{ pickingCostume=false; pickCostume(t,id); }},
+      avatarEl(t,{costume:id,removed:[],small:true,label:c.name}), $("span",{text:`${c.emoji} ${c.name}`})))),
+    $("button",{class:"btn ghost",style:"align-self:center",onclick:()=>{pickingCostume=false;render();},text:"Not now"}));
+}
+/* Home card */
+function undressCard(){
+  const t=other(me||"a"), P=piecesOf(t), i=removedOf(t).length, done=i>=P.length, h=heartsOf(me||"a"), costs=pieceCosts(t);
+  const A=avOf(t), picked=A.costume && A.costume.night===today_(), C=COSTUMES[t][costumeIdOf(t)];
+  if(pickingCostume) return costumePicker(t);
+  const btn = done ? $("button",{class:"btn primary",onclick:redress,text:`Dress ${himHer(t)} back up`})
+    : $("button",{class:"btn primary",disabled:h<costs[i],onclick:undress,text:`Take off ${hisHer(t)} ${pieceName(t,i)} \u00b7 ${costs[i]} \u2665`});
+  return $("div",{class:"form undress"},
+    $("div",{class:"row",style:"justify-content:space-between"},$("h3",{style:"font-size:20px",text:`Undress ${nm(t)}`}),$("span",{class:"hearts-pill",text:`${h} \u2665`})),
+    $("div",{class:"undress-row"},
+      $("button",{class:"avbtn","aria-label":`Open ${nm(t)}'s avatar`,onclick:()=>{tab="avatars";render();window.scrollTo(0,0);}},avatarEl(t,{small:true,label:nm(t)+"'s avatar"})),
+      $("div",{class:"stack",style:"min-width:0;flex:1"},
+        $("span",{class:"muted",style:"font-size:12px",text:`Tonight: ${C.emoji} ${C.name}`}),
+        $("p",{class:"wp",style:"font-size:14px",text: done ? `${nm(t)} is down to nothing \ud83d\udd25` : h<costs[i] ? `Play cards to earn hearts. ${costs[i]-h} more and ${hisHer(t)} ${pieceName(t,i)} comes off.` : `You've got enough. Go ahead \ud83d\ude0f`}),
+        btn,
+        $("button",{class:"btn small ghost",style:"align-self:flex-start",onclick:()=>{pickingCostume=true;render();},text: picked ? "Change costume" : `Pick ${hisHer(t)} costume`}))));
+}
+
+/* Avatar editor */
+function setLook(field, v){
+  const A=(S.avatars||{})[me]||{};
+  S.avatars=Object.assign({}, S.avatars||{}, {[me]: Object.assign({}, A, {look:Object.assign({}, avOf(me).look, {[field]:v})})});
+  save("avatars",[me]); render();
+}
+function swatches(field, colors, cur, label){
+  return $("div",{class:"field"},$("span",{class:"muted",style:"font-size:12px",text:label}),
+    $("div",{class:"swatches",role:"group","aria-label":label}, colors.map((c,i)=>$("button",{class:"sw",style:`background:${c}`,"aria-label":label+" "+(i+1),"aria-pressed":String(cur===i),onclick:()=>setLook(field,i)}))));
+}
+function chips(field, list, cur, label, names){
+  return $("div",{class:"field"},$("span",{class:"muted",style:"font-size:12px",text:label}),
+    $("div",{class:"seg tight segwrap",role:"group","aria-label":label}, list.map(v=>$("button",{class:"seg-yes","aria-pressed":String(cur===v),onclick:()=>setLook(field,v),text:(names&&names[v])||v[0].toUpperCase()+v.slice(1)}))));
+}
+function avatarEditor(){
+  const L=avOf(me).look, her=me==="a";
+  return $("div",{class:"stack",style:"gap:12px"},
+    swatches("skin",SKIN,L.skin,"Skin tone"),
+    chips("hair",HAIRS[me],L.hair,"Hair",HAIR_NAMES),
+    swatches("eye",EYEC,L.eye,"Eye color"),
+    L.hair!=="bald" ? swatches("hairc",HAIRC,L.hairc,"Hair color") : null,
+    chips("shape",Object.keys(SHAPES[me]),L.shape,"Body"),
+    $("p",{class:"muted",style:"margin:0;font-size:12px",text:"Colors for your Everyday outfit. Costumes bring their own."}),
+    swatches("c1",CLOTHC,L.c1, her?"Top and heels":"Hoodie"),
+    swatches("c2",CLOTHC,L.c2, her?"Bra and panties":"T-shirt and boxers"),
+    swatches("c3",CLOTHC,L.c3, her?"Jacket and jeans":"Jeans"));
+}
+let editAv=false;
+function viewAvatars(){
+  const t=other(me||"a"), A=avOf(t), P=piecesOf(t), i=removedOf(t).length, done=i>=P.length, h=heartsOf(me||"a"), costs=pieceCosts(t), C=COSTUMES[t][costumeIdOf(t)], myRem=removedOf(me||"a");
+  const won=couponsOf(t).list.filter(c=>c.claimedBy===me), mine=couponsOf(me), owedToMe=couponsOf(t).owed;
+  const cIn=$("input",{id:"cpIn",maxlength:"120",placeholder:`Something ${nm(t)} would love from you`});
+  return [header(),
+    $("div",{class:"row",style:"justify-content:space-between"},$("h2",{style:"font-size:26px",text:"Avatars"}),$("span",{class:"hearts-pill",text:`You have ${h} ♥`})),
+    $("p",{class:"muted",style:"margin:0;font-size:13px",text:`Every card you finish earns hearts: 1 in Slow Jams, 2 in Catching Feelings, 3 after that, plus 1 for a right guess. Each night you pick ${nm(t)}'s costume and spend hearts taking it off. Prices are set so a full undress takes about one good night of cards. Fully undress ${himHer(t)} and you win one of ${hisHer(t)} coupons.`}),
+    pickingCostume ? costumePicker(t) : null,
+    $("div",{class:"form",style:"align-items:center"},
+      $("div",{class:"row",style:"justify-content:space-between;align-self:stretch"},$("h3",{style:"font-size:20px",text:`${nm(t)} \u00b7 ${C.emoji} ${C.name}`}),$("button",{class:"btn small",onclick:()=>{pickingCostume=true;render();window.scrollTo(0,0);},text:"Costume"})),
+      avatarEl(t,{label:nm(t)+"'s avatar"}),
+      $("div",{class:"pieces"},P.map(([n,label],j)=>$("span",{class:"chip"+(j<i?" paused":""),text:(j<i?"✓ ":"")+label+(j>=i?` · ${costs[j]}♥`:"")}))),
+      done ? $("button",{class:"btn primary",onclick:redress,text:`Dress ${himHer(t)} back up for round ${(A.round||0)+2}`})
+        : $("button",{class:"btn primary",disabled:h<costs[i],onclick:undress,text:`Take off ${hisHer(t)} ${pieceName(t,i)} · ${costs[i]} ♥`})),
+    $("div",{class:"form",style:"align-items:center"},
+      $("div",{class:"row",style:"justify-content:space-between;align-self:stretch"},$("h3",{style:"font-size:20px",text:"You"}),$("button",{class:"btn small",onclick:()=>{editAv=!editAv;render();},text:editAv?"Done":"Customize"})),
+      avatarEl(me||"a",{label:"Your avatar"}),
+      $("p",{class:"muted",style:"margin:0;font-size:13px;text-align:center",text:`Tonight you're in ${COSTUMES[me||"a"][costumeIdOf(me||"a")].name}. `+(myRem.length ? `${nm(t)} has taken off your ${myRem.map((n,j)=>pieceName(me,j)).join(", ")}.` : `${nm(t)} hasn't taken anything off yet.`)}),
+      editAv ? avatarEditor() : null),
+    $("div",{class:"form"},
+      $("h3",{style:"font-size:20px",text:"Coupons you won"}),
+      won.length ? $("div",{class:"customlist"}, won.map(c=>$("div",{},$("span",{text:c.text}), c.used ? $("span",{class:"muted",style:"font-size:12px;flex-shrink:0",text:"Cashed in"}) : $("button",{class:"btn small primary",onclick:()=>cashIn(c.id),text:"Cash it in"}))))
+        : $("p",{class:"muted",style:"margin:0;font-size:13px",text: owedToMe ? `${nm(t)} owes you ${owedToMe} coupon${owedToMe>1?"s":""}. The next one ${t==="b"?"he":"she"} writes is yours.` : `Fully undress ${nm(t)} to win one.`})),
+    $("form",{class:"form",onsubmit:e=>{e.preventDefault(); const v=cIn.value.trim(); if(!v) return; addCoupon(v);}},
+      $("h3",{style:"font-size:20px",text:`Your coupons for ${nm(t)}`}),
+      $("p",{class:"muted",style:"margin:0;font-size:13px",text:`When ${nm(t)} fully undresses you, ${t==="b"?"he":"she"} wins one of these at random. Make them good.`}),
+      mine.owed ? $("p",{style:"margin:0;font-size:13px;color:var(--amber)",text:`You owe ${nm(t)} ${mine.owed}. Your next coupon goes straight to ${himHer(t)}.`}) : null,
+      $("div",{class:"row"},$("div",{style:"flex:1;min-width:0"},cIn),$("button",{class:"btn primary",type:"submit",text:"Add"})),
+      mine.list.length ? $("div",{class:"customlist"}, mine.list.map(c=>$("div",{},$("span",{text:c.text}),
+        c.claimedBy ? $("span",{class:"muted",style:"font-size:12px;flex-shrink:0",text:c.used?"Cashed in":`Won by ${nm(t)}`}) : $("button",{type:"button",class:"btn small ghost",onclick:()=>removeCoupon(c.id),text:"Delete"}))))
+        : $("p",{class:"muted",style:"margin:0;font-size:13px",text:"No coupons yet. Ideas: one “yes sir” with no attitude, a 10-minute voice note on demand, you pick the movie."}))
+  ];
+}
+/* ---------- onboarding: shown once per phone ---------- */
+let ob = 0;
+function obDone(next){ lsSet("ftl_onboarded", true); tab = next||"home"; render(); window.scrollTo(0,0); }
+function obGo(i){ ob=i; render(); window.scrollTo(0,0); }
+function viewOnboard(){
+  const total=8, partner=me?nm(other(me)):"your person";
+  const dots=$("div",{class:"obdots","aria-label":`Step ${ob+1} of ${total}`},Array.from({length:total},(_,i)=>$("i",{class:i<=ob?"on":""})));
+  const next=(label,fn)=>$("button",{class:"btn primary wbig",onclick:fn||(()=>obGo(ob+1)),text:label||"Next"});
+  const back=()=>ob>0?$("button",{class:"btn ghost",style:"align-self:center",onclick:()=>obGo(ob-1),text:"Back"}):null;
+  const c=[];
+  if(ob===0){
+    const logo=$("div",{class:"logo",style:"width:120px;height:120px;align-self:center"}); logo.innerHTML=LOGO_SVG;
+    c.push(logo,$("h2",{class:"wq",style:"text-align:center",text:"Welcome to For the Lovers"}),
+      $("p",{class:"wp",style:"text-align:center",text:`A game night for ${nm("a")} and ${nm("b")}, no matter how many miles are in between. You draw cards, take turns, and the night warms up on its own.`}),
+      $("p",{class:"wp muted",style:"text-align:center",text:"This takes about two minutes."}),next("Let's go"));
+  } else if(ob===1){
+    c.push($("h2",{class:"wq",text:"Who's holding this phone?"}),$("p",{class:"wp",text:"So the game knows whose cards to deal here."}),
+      $("div",{class:"wans"},["a","b"].map(k=>$("button",{class:"wbtn wb-yes","aria-pressed":String(me===k),onclick:()=>{me=k;lsSet("ah_me",k);obGo(2);},text:`I'm ${nm(k)}`}))));
+  } else if(ob===2){
+    c.push($("h2",{class:"wq",text:"How a night works"}),
+      $("p",{class:"wp",text:`You take turns. Draw a card, read it to ${partner} out loud, then tap Done. Then it's ${partner}'s turn on their phone.`}),
+      $("div",{class:"wkey"},HEAT.map((lv,i)=>$("div",{},$("b",{text:`${LEVEL_EMOJI[i]} ${lv.name}`}),` — ${lv.sub}.`))),
+      $("p",{class:"wp",text:"Every night starts soft and moves up a level every few cards. Don't like a card? Swipe it away and you'll get another one like it."}),
+      next(),back());
+  } else if(ob===3){
+    c.push($("h2",{class:"wq",text:"Hearts and avatars"}),
+      $("p",{class:"wp",text:`Every card you finish earns hearts. Each night you pick a costume for ${partner}'s avatar, then spend hearts taking it off one piece at a time. It takes about one good night of cards. Undress ${me==="b"?"her":"him"} completely and you win one of the coupons ${me==="b"?"she":"he"} wrote for you.`}),
+      $("p",{class:"wp",text:"First, make your avatar look like you."}),
+      $("div",{style:"align-self:center"},avatarEl(me||"a",{label:"Your avatar"})),
+      avatarEditor(), next(), back());
+  } else if(ob===4){
+    const swIn=$("input",{id:"obSw",value:S.settings.safeword||"",placeholder:"Something you'd never say by accident",maxlength:"40"});
+    swIn.addEventListener("change",()=>{ S.settings=Object.assign({},S.settings,{safeword:swIn.value.trim().slice(0,40)}); save("settings"); });
+    c.push($("h2",{class:"wq",text:"Pick a safeword"}),
+      $("p",{class:"wp",text:"If either of you says it, everything stops, no questions asked. The game reminds you of it before the first brat card each night, and the Safeword button on the Play screen cools the night down to sweet cards."}),
+      $("div",{class:"field"},$("label",{for:"obSw",text:"Your safeword (you two share one)"}),swIn),
+      next(S.settings.safeword?"Next":"Next, or skip for now",()=>{ const v=swIn.value.trim(); if(v!==(S.settings.safeword||"")){ S.settings=Object.assign({},S.settings,{safeword:v.slice(0,40)}); save("settings"); } obGo(5); }),back());
+  } else if(ob===5){
+    c.push($("h2",{class:"wq",text:"Your boundaries"}),
+      $("p",{class:"wp",text:`Boundaries is where you each say what you're into, what's a maybe, and what's a no. A No from either of you means those cards never come up. ${partner} will see your answers and you'll see theirs.`}),
+      $("p",{class:"wp",text:"The walkthrough asks one question at a time and explains each one in plain words. It takes about five minutes."}),
+      next("Start the walkthrough",()=>{ lsSet("ftl_onboarded",true); ob=0; tab="limits"; wizStart(); }),
+      $("button",{class:"btn ghost",style:"align-self:center",onclick:()=>obGo(6),text:"Do it later"}),back());
+  } else if(ob===6){
+    c.push($("h2",{class:"wq",text:"Make it an app"}),
+      $("p",{class:"wp",text:"Put the game on your home screen so it opens like an app."}),
+      $("div",{class:"wkey"},
+        $("div",{},$("b",{text:"iPhone: "}),"In Safari, tap the Share button, then Add to Home Screen."),
+        $("div",{},$("b",{text:"Android: "}),"In Chrome, tap the ⋮ menu, then Add to Home screen.")),
+      $("p",{class:"wp muted",text:`When it's ${partner}'s turn and the game isn't open on their phone, use the Text button on the Play screen to nudge them.`}),
+      next(),back());
+  } else {
+    c.push($("div",{class:"lu-emoji",style:"text-align:center",text:"💕"}),$("h2",{class:"wq",style:"text-align:center",text:"You're all set"}),
+      $("p",{class:"wp",style:"text-align:center",text:`Leave ${partner} a note on Home, or start your first game night.`}),
+      next("Start game night",()=>{ obDone("play"); }),
+      $("button",{class:"btn ghost",style:"align-self:center",onclick:()=>obDone("home"),text:"Go to Home"}));
+  }
+  return [$("div",{class:"obwrap"},dots,$("div",{class:"form wcard"},...c.filter(Boolean)))];
+}
+
 function viewLocked(){
   return [$("div",{class:"form",style:"margin-top:40px;text-align:center;align-items:center"},
     $("div",{class:"logo",style:"width:96px;height:96px"}),
@@ -1341,9 +1793,11 @@ function render(){
   const app=document.getElementById("app"); app.innerHTML="";
   if(!room){ const app=document.getElementById("app"); app.innerHTML=""; app.append(...viewLocked()); app.querySelector(".logo").innerHTML=LOGO_SVG; document.querySelector("nav.tabs").hidden=true; return; }
   document.querySelector("nav.tabs").hidden=false;
-  const v = tab==="home"?viewHome():tab==="play"?viewPlay():tab==="memories"?viewMemories():tab==="limits"?viewBoundaries():viewSettings();
+  if(!lsGet("ftl_onboarded",false)){ app.append(...viewOnboard()); document.querySelector("nav.tabs").hidden=true; return; }
+  document.querySelector("nav.tabs").hidden=false;
+  const v = tab==="avatars"?viewAvatars():tab==="home"?viewHome():tab==="play"?viewPlay():tab==="memories"?viewMemories():tab==="limits"?viewBoundaries():viewSettings();
   app.append(...v.flat().filter(Boolean)); renderTabs();
-  checkLevelUp();
+  checkLevelUp(); checkAvatarNews();
 }
 loadLocal(); render(); connect();
 </script>
