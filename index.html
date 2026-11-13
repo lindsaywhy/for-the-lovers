@@ -11,7 +11,7 @@
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 200 200'%3E%3Ccircle cx='100' cy='100' r='96' fill='%230d1d16' stroke='%23f4a6bf' stroke-width='8'/%3E%3Ctext x='100' y='132' text-anchor='middle' font-family='Impact,sans-serif' font-size='96' fill='%23f4a6bf'%3EYJ%3C/text%3E%3C/svg%3E">
 <title>For the Lovers</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Gloock&family=Anton&family=Pinyon+Script&family=Outfit:wght@300;400;500;600;800&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Gloock&family=Caveat:wght@600&family=Anton&family=Pinyon+Script&family=Outfit:wght@300;400;500;600;800&display=swap">
 <style>
 /* Layout: a single late-night screen — dashboard, a big playing card, and a tab bar along the bottom. Deliberately one dark look: his deep forest green, her pink. */
 :root{
@@ -138,6 +138,15 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
 .wnav{display:flex;justify-content:space-between;align-items:center;gap:10px}
 .wbig{align-self:stretch;padding:14px;font-size:16px}
 .wpromo{border-color:var(--rose)}
+.hello{display:flex;flex-direction:column;gap:6px;padding:6px 2px 2px}
+.hello-text{margin:0;font-family:var(--display);font-size:30px;line-height:1.18;text-wrap:balance;color:var(--fg)}
+.tonight{display:flex;flex-direction:column;gap:10px;background:var(--bg2);border:1px solid var(--rose);border-radius:20px;padding:18px}
+.sticky{background:#fdf3f5;color:#163024;border-radius:6px 18px 18px 18px;padding:14px 16px;transform:rotate(-1.2deg);box-shadow:0 8px 20px rgba(0,0,0,.3)}
+.sticky-text{font-family:"Caveat",cursive;font-size:26px;line-height:1.15;overflow-wrap:anywhere}
+.sticky-from{font-size:12px;color:#5b7a6a;margin-top:6px}
+.jar{display:flex;flex-wrap:wrap;gap:4px;min-height:44px;padding:12px;border:2px solid var(--line);border-top-width:6px;border-radius:14px 14px 28px 28px;background:var(--surface)}
+.jh{width:22px;height:20px;display:inline-block}
+.jh svg{width:100%;height:100%;fill:var(--rose);display:block}
 .checkin{text-align:center;font-size:13px;color:var(--amber);border:1px solid var(--line);border-radius:12px;padding:8px 12px}
 .nudge{display:flex;gap:12px;align-items:center;justify-content:space-between;background:var(--surface);border:1px solid var(--rose);border-radius:16px;padding:12px 14px}
 .bline{display:flex;gap:10px;align-items:center;justify-content:space-between;flex-wrap:wrap;padding-top:10px;border-top:1px solid var(--line)}
@@ -513,6 +522,7 @@ const DEFAULTS = {
   live:{card:null, by:null, n:0, night:"", history:[], reveal:null, cool:"", swNight:"", ys:0},
   nights:{dates:[]},
   memories:{items:[]},
+  notes:{},
   boundaries:{a:{}, b:{}, custom:[]}
 };
 
@@ -827,27 +837,74 @@ function allItems(){
     $("form",{class:"row",onsubmit:e=>{e.preventDefault(); const t=addIn.value.trim(); if(!t) return; const b=JSON.parse(JSON.stringify(S.boundaries||{a:{},b:{}})); b.custom=(b.custom||[]).concat({id:Date.now().toString(36),name:t.slice(0,60)}); S.boundaries=b; save("boundaries"); toast("Added. You both can answer it now."); render();}},
       $("div",{style:"flex:1;min-width:0"},addIn),$("button",{class:"btn primary",type:"submit",text:"Add"}))));
   return out;
-}function viewHome(){
-  const thisMonth=monthCount();
-  const now=new Date(), first=new Date(now.getFullYear(),now.getMonth(),1), days=new Date(now.getFullYear(),now.getMonth()+1,0).getDate();
-  const played=new Set(S.nights.dates||[]);
-  const monthShort=now.toLocaleString(undefined,{month:"short"});
-  const grid=$("div",{class:"calgrid"});
-  for(let d=1;d<=days;d++){ const key=ymd(new Date(now.getFullYear(),now.getMonth(),d));
-    grid.append($("span",{class:(played.has(key)?"on ":"")+(d===now.getDate()?"today":""),title:monthShort+" "+d})); }
-  const monthName=now.toLocaleString(undefined,{month:"long"});
+}/* Flirty hellos. On her phone they're what he'd say to her; on his, what she'd say to him. */
+const GREET = {
+  her:{
+    morning:["Good morning, beautiful. You were the first thing on my mind.","Morning, gorgeous. Wish I was waking up next to you.","Rise and shine, pretty girl. I already miss you."],
+    day:["Hey pretty girl, you been on my mind all day.","Look who it is. Still the finest woman I know.","Hey beautiful. Just checking that you know you're mine."],
+    evening:["There she is. I been waiting on you all day.","Hey gorgeous. Come tell me about your day.","Evening, beautiful. I saved some energy just for you."],
+    late:["Late night, huh? Come here, I missed you.","You up thinking about me too?","It's late, beautiful. You know what that means."]},
+  him:{
+    morning:["Good morning, handsome. I hope you dreamed about me.","Morning, baby. Wish I was waking up on your chest.","Rise and shine, handsome. You already on my mind."],
+    day:["Hey handsome, you been on my mind all day.","Hey you. Don't work too hard, I need you later.","Look who it is. Still my favorite man."],
+    evening:["There he is. Took you long enough.","Hey baby. Come tell me about your day.","Evening, handsome. I've been waiting on you."],
+    late:["Late night, huh? I've been waiting on you, baby.","You up thinking about me too?","It's late, handsome. Don't be shy now."]}
+};
+function greeting(){
+  const hr=new Date().getHours();
+  const part = hr<5 ? "late" : hr<12 ? "morning" : hr<17 ? "day" : hr<22 ? "evening" : "late";
+  const who = me==="b" ? "him" : "her";
+  const list = GREET[who][part];
+  const seed = (ymd(new Date())+part+who).split("").reduce((a,c)=>a+c.charCodeAt(0),0);
+  return {part, text:list[seed % list.length]};
+}
+const HEART = '<svg viewBox="0 0 26 24" aria-hidden="true"><path d="M13 22 C4 15 1 10 1 6.5 A5.5 5.5 0 0 1 13 4 A5.5 5.5 0 0 1 25 6.5 C25 10 22 15 13 22Z"/></svg>';
+function sendNote(text){
+  const n=Object.assign({}, S.notes||{}); n[me] = text ? {text:text.slice(0,200), at:Date.now()} : null;
+  S.notes=n; save("notes"); render();
+}
+function viewHome(){
+  const g=greeting();
+  const n=nightN(), c=S.live.card, started=n>0;
+  const partner=nm(other(me||"a"));
+  /* Tonight */
+  let status;
+  if(!started) status = "Every night starts fresh at Slow Jams and warms up from there.";
+  else {
+    const lvl=heatFor(n).name;
+    const turn = !c ? "" : !c.done ? (c.by===me||S.live.by===me ? " It's your card." : ` ${nm(S.live.by)} has a card going.`) : (other(S.live.by)===me ? " It's your turn." : ` It's ${nm(other(S.live.by))}'s turn.`);
+    status = `You're in ${lvl}, ${n} card${n===1?"":"s"} in.${turn}`;
+  }
+  const tonight=$("div",{class:"tonight"},
+    $("div",{class:"eyebrow",text:"Tonight"}),
+    $("p",{class:"wp",text:status}),
+    $("button",{class:"start",onclick:()=>{ if(!me){askWho();return;} logNight(); tab="play"; render(); window.scrollTo(0,0)},text:started?"Keep going":"Start game night"}));
+  /* Notes */
+  const theirs=(S.notes||{})[other(me||"a")], mine=(S.notes||{})[me||"a"];
+  const noteIn=$("textarea",{id:"noteIn",maxlength:"200",placeholder:`Leave ${partner} a little something…`});
+  const when=t=>{ const d=new Date(t), today=ymd(new Date())===ymd(d); return today ? "today, "+d.toLocaleTimeString([], {hour:"numeric",minute:"2-digit"}) : d.toLocaleDateString(undefined,{month:"short",day:"numeric"}); };
+  const notes=$("div",{class:"form"},
+    $("h3",{style:"font-size:20px",text:"Notes"}),
+    theirs && theirs.text ? $("div",{class:"sticky"},$("div",{class:"sticky-text",text:theirs.text}),$("div",{class:"sticky-from",text:`— ${partner}, ${when(theirs.at)}`}))
+      : $("p",{class:"muted",style:"margin:0;font-size:13px",text:`No note from ${partner} yet.`}),
+    $("form",{class:"stack",onsubmit:e=>{e.preventDefault(); const t=noteIn.value.trim(); if(!t) return; sendNote(t); toast("Note sent.");}},
+      $("label",{for:"noteIn",class:"muted",style:"font-size:12px",text:`Your note for ${partner}`}), noteIn,
+      $("button",{class:"btn primary",type:"submit",style:"align-self:flex-start",text:"Send note"})),
+    mine && mine.text ? $("div",{class:"row",style:"justify-content:space-between;align-items:flex-start;gap:8px"},
+      $("span",{class:"muted",style:"font-size:13px;min-width:0",text:`${partner} sees: “${mine.text}”`}),
+      $("button",{class:"btn small ghost",onclick:()=>sendNote(""),text:"Take back"})) : null);
+  /* Our jar: one heart for every night you've played */
+  const nights=new Set(S.nights.dates||[]).size, shown=Math.min(nights,60);
+  const jar=$("div",{class:"jar","aria-label":`${nights} hearts in your jar`});
+  for(let i=0;i<shown;i++){ const s=$("span",{class:"jh"}); s.innerHTML=HEART; s.style.transform=`rotate(${((i*37)%30)-15}deg)`; jar.append(s); }
+  const jarBox=$("div",{class:"form jarbox"},
+    $("h3",{style:"font-size:20px",text:"Our jar"}),
+    jar,
+    $("p",{class:"muted",style:"margin:0;font-size:13px",text: nights===0 ? "Every night you play drops a heart in here." : nights===1 ? "One heart so far. Every night you play drops another one in." : `${nights} hearts and counting. Every night you play drops another one in.`}));
   return [
     header(),
-    $("div",{class:"stats"},
-      $("div",{class:"stat"},$("span",{class:"eyebrow",text:"Days played"}),$("span",{class:"big"},String(new Set(S.nights.dates||[]).size),$("small",{text:new Set(S.nights.dates||[]).size===1?"day":"days"})),
-        $("span",{class:"muted",style:"font-size:13px",text:"Every day you play together counts."}))
-    ),
-    $("div",{class:"cal"},
-      $("div",{class:"row",style:"justify-content:space-between"},$("span",{style:"font-weight:500;font-size:14px",text:monthName}),$("span",{class:"muted",style:"font-size:12px",text:`${thisMonth} night${thisMonth===1?"":"s"} this month`})),
-      grid
-    ),
-    $("button",{class:"start",onclick:()=>{ if(!me){askWho();return;} logNight(); tab="play"; render(); window.scrollTo(0,0)},text:"Start game night"}),
-    $("p",{class:"muted",style:"margin:0;font-size:13px;text-align:center",text:"Every night starts soft and warms up the more cards you play."})
+    $("div",{class:"hello"},$("div",{class:"eyebrow",text: g.part==="late" ? "After hours" : g.part==="morning" ? "Good morning" : g.part==="day" ? "Hey you" : "Tonight"}),$("p",{class:"hello-text",text:g.text})),
+    tonight, notes, jarBox
   ];
 }
 /* Swipe an open card left or right to pass on it. */
