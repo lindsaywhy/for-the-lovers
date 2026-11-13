@@ -147,7 +147,7 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
 .jar{display:flex;flex-wrap:wrap;gap:4px;min-height:44px;padding:12px;border:2px solid var(--line);border-top-width:6px;border-radius:14px 14px 28px 28px;background:var(--surface)}
 .jh{width:22px;height:20px;display:inline-block}
 .jh svg{width:100%;height:100%;fill:var(--rose);display:block}
-.levelup{position:fixed;inset:0;z-index:40;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;text-align:center;padding:24px;background:radial-gradient(circle at 50% 45%,#2a5a43ee,#0a1711f2);cursor:pointer}
+.levelup{position:fixed;inset:0;z-index:40;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;text-align:center;padding:24px;background:radial-gradient(circle at 50% 45%,#1f4a35,#0a1711 70%);cursor:pointer}
 .levelup.show{animation:lu .5s cubic-bezier(.2,.8,.2,1)}
 @keyframes lu{from{opacity:0;transform:scale(.92)}to{opacity:1;transform:none}}
 @media (prefers-reduced-motion:reduce){.levelup.show{animation:none}}
@@ -1303,7 +1303,7 @@ function settleGuess(actual){
   const c=S.live.card, right=c.guess===actual, sc=guessScore();
   if(right) sc[S.live.by]=(sc[S.live.by]||0)+1;
   S.live=Object.assign({},S.live,{guesses:sc, card:Object.assign({},c,{answer:actual, right})}); save("live");
-  toast(right ? "You know them 🎯" : "Not this time 😅"); render();
+  toast(right ? "You know "+nm(other(S.live.by))+" 🎯" : "Not this time 😅"); render();
 }
 function guessUI(){
   const c=S.live.card; if(nightN()===0 || !c || c.done || !isYesNo(c)) return [];
