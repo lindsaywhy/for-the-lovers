@@ -128,6 +128,17 @@ a.btn{color:inherit;text-decoration:none;display:inline-flex;align-items:center;
 .reveal-card{border-color:var(--rose)}
 .reveal-card.locked{border-style:dashed}
 .irl-card{border-color:var(--d-irl);background:linear-gradient(160deg,#ffd36e14,transparent 60%),var(--bg2)}
+.subfold{border:1px solid var(--line);border-radius:14px;padding:10px 12px;background:#ffffff05}
+.subfold>summary{cursor:pointer;font-weight:600;list-style:none;display:flex;justify-content:space-between}
+.subfold>summary::-webkit-details-marker{display:none}
+.subfold>summary::after{content:"+";color:var(--rose)}
+.subfold[open]>summary::after{content:"–"}
+.subfold[open]{display:flex;flex-direction:column;gap:10px}
+.pref-row{display:flex;align-items:center;gap:10px}
+.time-in{max-width:160px}
+.subfold .chip{cursor:pointer;background:transparent;font:inherit;font-size:13px;padding:6px 12px}
+.subfold .chip.on{border-color:var(--rose);background:var(--rose);color:var(--deep);font-weight:600}
+.subfold .seg button[aria-pressed="true"]{background:var(--rose);color:var(--deep)}
 .alert-ask{display:flex;align-items:center;gap:8px;padding:10px 12px;border-radius:16px;border:1px dashed var(--rose);background:#f4a6bf0d}
 .al-row{display:flex;gap:10px;align-items:flex-start}
 .al-dot{width:10px;height:10px;border-radius:50%;margin-top:6px;flex:none;background:#ffffff33;box-shadow:0 0 0 3px #ffffff10}
@@ -746,7 +757,9 @@ function pushHereOn(){ return !!(me && ((S.push||{})[me]||{})[devId()]) && typeo
 function savePushSub(sub){
   const mine=Object.assign({}, (S.push||{})[me]||{});
   if(sub) mine[devId()]=sub; else delete mine[devId()];
-  S.push=Object.assign({}, S.push||{}, {[me]:mine}); return save("push",[me]);
+  S.push=Object.assign({}, S.push||{}, {[me]:mine});
+  if(sub && !(S.push["pref_"+me])) S.push["pref_"+me]=Object.assign(JSON.parse(JSON.stringify(PREF_DEFAULT)),{tz:(()=>{ try{ return Intl.DateTimeFormat().resolvedOptions().timeZone; }catch(e){ return "America/New_York"; } })()});
+  return save("push",[me,"pref_"+me]);
 }
 async function pushTest(quiet){
   const j = await pushSend(me, "For the Lovers", "Alerts are on 🔔 This is what a ping looks like.", "test");
@@ -777,19 +790,31 @@ async function pushRefresh(){
     if(sub && (!saved || saved.endpoint!==sub.endpoint)) savePushSub(sub.toJSON());
   }catch(e){}
 }
-function pushSend(to, title, body, tag){
+function pushSend(to, title, body, tag, remind){
   if(!room) return Promise.resolve({sent:0});
   return fetch(SB_URL+"/functions/v1/ftl-notify", {method:"POST", headers:{"Content-Type":"application/json"},
-    body:JSON.stringify({room:room.id, secret:room.secret, to, title, body, tag})})
+    body:JSON.stringify({room:room.id, secret:room.secret, to, title, body, tag, remind:remind||null})})
     .then(r=>r.json()).then(j=>{ if(j && j.gone && j.gone.length){ const theirs=Object.assign({}, (S.push||{})[to]||{}); j.gone.forEach(id=>delete theirs[id]); S.push=Object.assign({}, S.push||{}, {[to]:theirs}); save("push",[to]); } return j; })
     .catch(()=>({sent:0}));
 }
 function pushOn(k){ return Object.values((S.push||{})[k]||{}).some(Boolean); }
-function notifyOther(tag, body, gap){
+/* Each person's alert preferences live in S.push["pref_a"/"pref_b"]. The server reads them too, for quiet hours and reminders. */
+const PING_CAT = {cards:"cards",mm:"match",did:"match",wyr:"wyr",td:"td",tda:"td",tdr:"td",ttl:"ttl",ttlg:"ttl",story:"ttl",askstory:"ttl",dice:"dice",dicer:"dice",daily:"daily",note:"note",reward:"reward"};
+const PING_GAMES = [["cards","🃏 Pillow Talk","Your turn, and when they finish a card"],["match","💞 Same Page","Matches and things checked off Our List"],["wyr","👆 This or That","When they've been swiping"],["td","😈 Run It","Truths, dares, answers and reactions"],["ttl","🧢 Cap or Facts","New rounds, guesses and stories"],["dice","🎲 Dice","Rolls and reactions"],["daily","💭 Question of the day","When they answer"],["note","💌 Notes","When they leave you one"],["reward","🎁 Rewards","When they cash one in"]];
+const PREF_DEFAULT = {games:{}, quiet:{on:false,from:"23:00",to:"08:00"}, turn:{on:true,hours:4}, daily:{on:false,time:"20:00"}, owed:{on:false,day:0,time:"19:00"}, night:{on:false,days:[5,6],time:"21:00"}};
+function prefsOf(k){ const p=(S.push||{})["pref_"+k]||{}; const out=JSON.parse(JSON.stringify(PREF_DEFAULT)); for(const x in p) out[x]=(typeof p[x]==="object" && !Array.isArray(p[x])) ? Object.assign(out[x]||{}, p[x]) : p[x]; return out; }
+function setPref(path, val){
+  const p=prefsOf(me); const [a,b]=path.split(".");
+  if(b) p[a]=Object.assign({}, p[a]||{}, {[b]:val}); else p[a]=val;
+  try{ p.tz=Intl.DateTimeFormat().resolvedOptions().timeZone; }catch(e){}
+  S.push=Object.assign({}, S.push||{}, {["pref_"+me]:p}); save("push",["pref_"+me]); render();
+}
+function notifyOther(tag, body, gap, remind){
   if(!me) return; const o=other(me); if(!pushOn(o)) return;
+  if(prefsOf(o).games[PING_CAT[tag]||tag]===false) return;   /* they switched this game off */
   const last=lsGet("ftl_ping",{}), now=Date.now();
   if(last[tag] && now-last[tag] < (gap||60)*1000) return;
-  last[tag]=now; lsSet("ftl_ping",last); pushSend(o, "For the Lovers", body, tag);
+  last[tag]=now; lsSet("ftl_ping",last); pushSend(o, "For the Lovers", body, tag, remind);
 }
 /* Deep links: a tapped alert (or a Home row) opens the exact game it's about. */
 const GO_MAP = {ttl:"ttl",ttlg:"ttl",story:"ttl",askstory:"ttl",td:"td",tda:"td",tdr:"td",dice:"dice",dicer:"dice",wyr:"wyr",mm:"match",did:"match"};
@@ -821,6 +846,33 @@ function codeCard(){
     : $("button",{class:"btn small",style:"align-self:flex-start",onclick:()=>{ codeOpen=true; render(); },text:"Change the code"}),
     $("p",{class:"muted",style:"margin:0;font-size:13px",text:"Nobody can read the code back, not even the database: it's scrambled before it's stored. Don't text it; say it."}));
 }
+function alertPrefs(){
+  const pr=prefsOf(me), P=nm(other(me||"a"));
+  const sw=(on,label,fn)=>$("button",{class:"switch",role:"switch","aria-checked":String(!!on),"aria-label":label+(on?" on":" off"),onclick:fn});
+  const time=(id,val,fn)=>{ const i=$("input",{type:"time",id,value:val,class:"time-in"}); i.addEventListener("change",()=>{ if(i.value) fn(i.value); }); return i; };
+  const line=(label,sub,control)=>$("div",{class:"pref-row"},$("div",{style:"min-width:0;flex:1"},$("div",{style:"font-weight:500",text:label}),sub?$("div",{class:"muted",style:"font-size:13px",text:sub}):null),control);
+  const DAYS=["Sun","Mon","Tue","Wed","Thu","Fri","Sat"];
+  const games=$("details",{class:"subfold",open:openFolds.has("al-games")},$("summary",{text:`What pings you (${PING_GAMES.filter(([k])=>pr.games[k]!==false).length} of ${PING_GAMES.length})`}),
+    ...PING_GAMES.map(([k,l,s])=>line(l,s,sw(pr.games[k]!==false,l,()=>setPref("games",Object.assign({},pr.games,{[k]:pr.games[k]===false})))))) ;
+  games.addEventListener("toggle",()=>games.open?openFolds.add("al-games"):openFolds.delete("al-games"));
+  const quiet=$("details",{class:"subfold",open:openFolds.has("al-quiet")},$("summary",{text:pr.quiet.on?`Quiet hours: ${fmtT(pr.quiet.from)} to ${fmtT(pr.quiet.to)}`:"Quiet hours: off"}),
+    line("Quiet hours","Pings wait, then come through when it ends",sw(pr.quiet.on,"Quiet hours",()=>setPref("quiet.on",!pr.quiet.on))),
+    pr.quiet.on ? $("div",{class:"two"},$("div",{class:"field"},$("label",{for:"qFrom",text:"From"}),time("qFrom",pr.quiet.from,v=>setPref("quiet.from",v))),$("div",{class:"field"},$("label",{for:"qTo",text:"Until"}),time("qTo",pr.quiet.to,v=>setPref("quiet.to",v)))) : null);
+  quiet.addEventListener("toggle",()=>quiet.open?openFolds.add("al-quiet"):openFolds.delete("al-quiet"));
+  const rem=$("details",{class:"subfold",open:openFolds.has("al-rem")},$("summary",{text:`Reminders (${["turn","daily","owed","night"].filter(k=>pr[k].on).length} on)`}),
+    line("If it's still your turn",`One follow-up when something from ${P} has waited a while`,sw(pr.turn.on,"Turn reminders",()=>setPref("turn.on",!pr.turn.on))),
+    pr.turn.on ? $("div",{class:"seg tight",role:"group","aria-label":"Remind after"},...[2,4,8].map(n=>$("button",{"aria-pressed":String(+pr.turn.hours===n),onclick:()=>setPref("turn.hours",n),text:`after ${n} hrs`}))) : null,
+    line("Answer today's question","A nudge if you haven't by",sw(pr.daily.on,"Daily question reminder",()=>setPref("daily.on",!pr.daily.on))),
+    pr.daily.on ? time("dTime",pr.daily.time,v=>setPref("daily.time",v)) : null,
+    line("Rewards you owe",`A weekly nudge if you still owe ${P} something`,sw(pr.owed.on,"Owed rewards reminder",()=>setPref("owed.on",!pr.owed.on))),
+    pr.owed.on ? $("div",{class:"row",style:"gap:8px;flex-wrap:nowrap"},$("select",{"aria-label":"Day",onchange:e=>setPref("owed.day",+e.target.value)},...DAYS.map((d,i)=>$("option",{value:String(i),selected:+pr.owed.day===i,text:d+"days"}))),time("oTime",pr.owed.time,v=>setPref("owed.time",v))) : null,
+    line("Game night","A ping on the nights you pick",sw(pr.night.on,"Game night reminder",()=>setPref("night.on",!pr.night.on))),
+    pr.night.on ? $("div",{class:"chips"},...DAYS.map((d,i)=>{ const on=(pr.night.days||[]).includes(i); return $("button",{class:"chip"+(on?" on":""),"aria-pressed":String(on),onclick:()=>setPref("night.days", on ? pr.night.days.filter(x=>x!==i) : (pr.night.days||[]).concat(i).sort()),text:d}); })) : null,
+    pr.night.on ? time("nTime",pr.night.time,v=>setPref("night.time",v)) : null);
+  rem.addEventListener("toggle",()=>rem.open?openFolds.add("al-rem"):openFolds.delete("al-rem"));
+  return $("div",{class:"stack",style:"gap:8px"},games,quiet,rem);
+}
+function fmtT(t){ const [H,M]=(t||"0:0").split(":").map(Number); return `${(H%12)||12}${M?":"+String(M).padStart(2,"0"):""}${H<12?"am":"pm"}`; }
 function alertNudgeLink(){ const o=other(me||"a"); return nudgeLink(`Turn on alerts in our game so you know when it's your turn 🔔 Settings → Alerts → Turn on.`); }
 function alertsCard(compact){
   const here=pushHereOn(), o=other(me||"a"), P=nm(o), theirs=pushOn(o);
@@ -839,7 +891,8 @@ function alertsCard(compact){
       here ? $("button",{class:"btn",onclick:()=>pushTest(),text:"Send me a test"}) : $("button",{class:"btn primary",onclick:()=>pushEnable(),text:"Turn on alerts"}),
       here ? $("button",{class:"btn small ghost",onclick:()=>pushDisable(),text:"Turn off"}) : null),
     row(theirs, theirs?`${P}: on`:`${P}: off`, theirs?`Your moves reach ${himHer(o)} as a ping.`:`${P} won't hear about your moves until ${heShe(o)} turns alerts on.`),
-    theirs ? null : $("a",{class:"btn small",style:"align-self:flex-start",href:alertNudgeLink(),text:`Text ${P} to turn ${hisHer(o)} on`}));
+    theirs ? null : $("a",{class:"btn small",style:"align-self:flex-start",href:alertNudgeLink(),text:`Text ${P} to turn ${hisHer(o)} on`}),
+    (here || pushOn(me)) ? alertPrefs() : null);
 }
 let tab = "home", db = null, synced = false, lastCardKey = null, myMission = null;
 function lsGet(k,d){try{const v=localStorage.getItem(k);return v==null?d:JSON.parse(v)}catch(e){return d}}
@@ -1066,7 +1119,7 @@ function markDone(){
   /* Done hands the turn to your partner. Draw your next card when they're finished. */
   S.live = Object.assign({}, S.live, {card:Object.assign({}, c, {done:true}), doneNight:today, doneCount:(S.live.doneNight===today?(S.live.doneCount||0):0)+1});
   save("live");
-  notifyOther("cards", `Your turn in Pillow Talk. ${nm(me)} is waiting on you 😏`, 30);
+  notifyOther("cards", `Your turn, ${nm(other(me))}. ${nm(me)} is waiting on you 😏`, 30, {chk:{key:"live", field:"n", equals:S.live.n}, body:`Still your turn in Pillow Talk 😏`});
   award(S.live.by||me, HEARTS_PER_LEVEL[HEAT.indexOf(heatFor(Math.max(1,nightN())))]||1);
   render();
 }
@@ -1292,19 +1345,22 @@ const gGet = k => (S.games||{})[k] || null;
 function gSet(k, v){ S.games = Object.assign({}, S.games||{}, {[k]: v}); save("games",[k]); if(v) gPing(k, v); }
 /* A ping for the other person when a game move is theirs to see. */
 function gPing(k, v){
-  const M=nm(me||"a"), kind=k.split("|")[0];
-  if(kind==="ttl") notifyOther("ttl", `${M} left you a Cap or Facts. Find the cap 🧢`);
-  else if(kind==="ttlg") notifyOther("ttlg", `${M} guessed your Cap or Facts 👀`);
-  else if(kind==="td") notifyOther("td", `${M} sent you a ${v.type==="dare"?"dare":"truth"} 😈`);
-  else if(kind==="tda") notifyOther("tda", `${M} answered what you sent in Run It 👀`);
-  else if(kind==="tdr") notifyOther("tdr", `${M} reacted to your Run It answer`);
-  else if(kind==="dice") notifyOther("dice", `${M} rolled the dice and told you how 🎲`);
-  else if(kind==="dicer") notifyOther("dicer", `${M} reacted to your dice roll`);
-  else if(kind==="wyr") notifyOther("wyr", `${M} is playing This or That. Your turn to swipe`, 1800);
-  else if(kind==="mm") notifyOther("mm", `${M} is swiping Same Page. Catch up and see your matches`, 1800);
+  const M=nm(me||"a"), kind=k.split("|")[0], id=k.split("|")[1];
+  const wait=(field, body)=>({chk:{key:"games", field, absent:true}, body});
+  if(kind==="ttl") notifyOther("ttl", `${M} left you a Cap or Facts 🧢 Two facts, one cap. Find it.`, 60, wait(`ttlg|${id}`, `${M}'s Cap or Facts is still sitting there 🧢`));
+  else if(kind==="ttlg") notifyOther("ttlg", `${M} took a guess on your Cap or Facts 👀 See if they got you.`);
+  else if(kind==="td") notifyOther("td", v.type==="dare" ? `${M} sent you a dare 😈 You running it or nah?` : `${M} sent you a truth. Be honest 👀`, 60, wait(`tda|${id}`, `That ${v.type==="dare"?"dare":"truth"} from ${M} is still waiting on you 😈`));
+  else if(kind==="tda") notifyOther("tda", `${M} ran it. Go see 👀`);
+  else if(kind==="tdr") notifyOther("tdr", v.text ? `${M} replied: “${String(v.text).slice(0,60)}”` : `${M} reacted to your answer ${v.r||""}`.trim());
+  else if(kind==="dice") notifyOther("dice", `${M} rolled the dice 🎲 Come see what came up.`);
+  else if(kind==="dicer") notifyOther("dicer", `${M} reacted to your roll ${v.r||""}`.trim());
+  else if(kind==="wyr") notifyOther("wyr", `${M} been swiping This or That. Your turn 👆`, 1800);
+  else if(kind==="mm"){ const parts=k.split("|"), x=MATCH.find(q=>q.id===parts[1]), theirs=x&&mAns(x,other(me));
+    if(v.v===1 && theirs && theirs.v===1) notifyOther("mm", `It's a match 🔥 You both want: ${x.t}`, 5);
+    else notifyOther("mm", `${M} been swiping Same Page. Catch up and see what matches 🔥`, 1800); }
   else if(kind==="did") notifyOther("did", `${M} checked one off Our List 🔥`);
-  else if(kind==="story") notifyOther("story", `${M} told you the story behind a Cap or Facts 📖`);
-  else if(kind==="askstory") notifyOther("story", `${M} wants the story behind your Cap or Facts 📖`);
+  else if(kind==="story") notifyOther("story", `${M} told you the story 📖`);
+  else if(kind==="askstory") notifyOther("story", `${M} wants the story behind your Cap or Facts 📖`, 60, wait(`story|${id}`, `${M} is still waiting on that story 📖`));
 }
 const gId = () => Date.now().toString(36)+Math.random().toString(36).slice(2,6);
 const heShe = k => k==="b" ? "he" : "she";
@@ -1936,7 +1992,7 @@ let dailyEditing=false;
 function answerDaily(text){
   const day=ymd(new Date()), key=`${day}|${me}`;
   S.daily=Object.assign({}, S.daily||{}, {[key]: text ? {text:text.slice(0,600), at:Date.now()} : null});
-  save("daily",[key]); dailyEditing=false; if(text) notifyOther("daily", `${nm(me)} answered today's question. Your turn 💭`, 600); render();
+  save("daily",[key]); dailyEditing=false; if(text) notifyOther("daily", `${nm(me)} answered today's question. Your turn 💭`, 600, {chk:{key:"daily", field:`${day}|${other(me)}`, absent:true}, body:`Today's question is still waiting on you 💭`}); render();
 }
 function checkDailyNews(){
   if(!me) return; const day=ymd(new Date()), a=dailyAns(day,other(me)), seen=lsGet("ftl_seen_daily",null), stamp=a?`${day}|${a.at}`:null;
