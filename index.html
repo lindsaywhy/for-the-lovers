@@ -79,6 +79,23 @@ a.btn{color:inherit;text-decoration:none;display:inline-flex;align-items:center;
 .chk:active{background:var(--rose)}
 .bank-row .btn{white-space:nowrap}
 .chip.idea{cursor:pointer;background:#f4a6bf14;border-color:#f4a6bf66;color:var(--fg);font:inherit;font-size:13px}
+.tot-card{touch-action:none;user-select:none;transition:transform .15s;position:relative;min-height:260px;justify-content:space-between}
+.tot-card.dragging{transition:none}
+.tot-card[data-lean="agree"]{box-shadow:inset 0 0 0 2px var(--d-date)}
+.tot-card[data-lean="nah"]{box-shadow:inset 0 0 0 2px var(--d-dark)}
+.tot-card[data-lean="maybe"]{box-shadow:inset 0 0 0 2px var(--amber)}
+.tot-text{font-size:26px;text-align:center;margin:12px 0}
+.tot-btns{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.tot-btns .btn{padding-inline:6px}
+.tot-ans{display:flex;gap:14px;flex-wrap:wrap;font-size:14px}
+.tot-reveal{display:flex;flex-direction:column;gap:6px;padding:14px;border-radius:16px;border:1px solid var(--line);background:#ffffff0a}
+.tot-reveal.same{border-color:var(--rose);background:#f4a6bf1a}
+.tot-q{font-size:16px}
+.pick-wrap{display:flex;align-items:center;gap:6px}
+.pick-wrap .pick{flex:1;min-width:0}
+.gip{display:flex;align-items:center;gap:12px;width:100%;padding:12px 14px;border-radius:16px;border:1px solid var(--line);background:#ffffff08;color:inherit;font:inherit;cursor:pointer}
+.gip.hot{border-color:var(--rose);background:#f4a6bf12}
+.gip .np-track{height:6px}
 .games-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
 .game-tile{position:relative;display:flex;flex-direction:column;align-items:flex-start;gap:4px;padding:16px 14px;border-radius:18px;border:1px solid var(--line);background:var(--bg2);color:inherit;font:inherit;text-align:left;cursor:pointer;min-height:118px}
 .game-tile:last-child:nth-child(odd){grid-column:1/-1}
@@ -1028,63 +1045,71 @@ const EARN = {
 };
 function earnLine(id){ return $("div",{class:"earn",text:EARN[id]}); }
 
-/* ---- Would you rather ---- */
+/* This or That: one statement per card. Swipe right = agree, left = disagree, down = maybe. */
 const WYR = [
-  ["Slow dance in the kitchen","Ride around at night with the music up"],
-  ["A whole weekend in bed","A whole weekend out in the city"],
-  ["Get a long voice note from {you}","Get a long letter from {you}"],
-  ["Cook dinner together","Order one of everything"],
-  ["Beach trip","Cabin somewhere quiet"],
-  ["Know everything {you} is thinking for a day","Have {you} know everything you're thinking for a day"],
-  ["Fall asleep on the phone","Wake up to a good morning text"],
-  ["Pick the movie every time","Pick the food every time"],
-  ["Matching tattoos","Matching outfits in public"],
-  ["Go back and redo our first date","Skip ahead and see us in 10 years"],
-  ["Lights on","Lights off"],
-  ["A quickie somewhere risky","All night, no rushing"],
-  ["Morning sex","Middle of the night sex"],
-  ["Make out for an hour and nothing else","Skip straight to it"],
-  ["Hear exactly what {you} wants to do to you","Read it in a text",["talk"]],
-  ["Get tied up","Do the tying",["tied"]],
-  ["Get teased till you beg","Make {you} beg",["beg","denial"]],
-  ["Get spanked","Do the spanking",["spank"]],
-  ["Get a pic from {you}","Get a voice note from {you}",["photos","voice"]],
-  ["Be in charge all night","Do whatever {you} says all night",["control"]],
-  ["{you} controls your toy from 800 miles away","You control theirs",["remote","toys"]],
-  ["Get your hair pulled","Pull hair",["hair"]],
-  ["Give for 20 minutes straight","Get it for 20 minutes straight",["oral"]],
-  ["Rough","Slow and sensual",["rough"]],
-  ["Hear {you} moan your name","Hear {you} beg",["talk","beg"]]
-].map(([a,b,tags],i)=>({id:"w"+i,a,b,tags:tags||[]}));
+  ["A slow dance in the kitchen beats a night out."],["Voice notes are better than texts."],["Falling asleep on the phone counts as a date."],
+  ["We should get matching tattoos one day."],["Breakfast in bed beats breakfast out."],["Long distance made us closer, not further."],
+  ["Good morning texts are a must."],["Pet names in public are cute, not corny."],["A beach trip beats a cabin trip."],
+  ["We'd survive a road trip with no plan."],["We should plan our next trip this month."],["Love is something you show more than say."],
+  ["We were always going to end up back together."],["Making up is better than never arguing."],
+  ["Morning sex beats night sex."],["Lights on is better than lights off."],["A quickie can be just as good as all night."],
+  ["Making out with no sex can be the hottest part."],["Teasing all day before is half the fun.",["denial"]],["Getting a pic beats getting a voice note.",["photos","voice"]],
+  ["Being told what to do in bed is hot.",["control"]],["Rough beats slow and sensual.",["rough"]],["Spanking should be on the menu more.",["spank"]],
+  ["Toys make it better, not weird.",["toys"]],["Getting tied up sounds fun.",["tied"]],["Hearing your name moaned is the best sound.",["talk"]],
+  ["Almost getting caught is a turn on."],["Phone sex counts as real sex.",["talk","self"]],["Giving is just as hot as getting.",["oral"]],["Hair pulling is a yes.",["hair"]]
+].map(([t,tags],i)=>({id:"s"+i,t,tags:tags||[]}));
 const gMode = (id,def) => ((S.settings.modes||{})[id]) || def;
 function setMode(id,v){ S.settings=Object.assign({}, S.settings, {modes:Object.assign({}, S.settings.modes||{}, {[id]:v})}); save("settings"); render(); }
-function wyrList(){ const m=gMode("wyr","both"); return WYR.filter((q,i)=>G_OK(q.tags) && (m==="both" || (m==="sweet" ? i<10 : i>=10))); }
+const WYR_SWEET=14;
+const TOT_LABEL={1:"Agree",0:"Disagree",2:"Maybe"};
+function wyrList(){ const m=gMode("wyr","both"); return WYR.filter((q,i)=>G_OK(q.tags) && (m==="both" || (m==="sweet" ? i<WYR_SWEET : i>=WYR_SWEET))); }
 const wyrAns = (q,k) => gGet(`wyr|${q.id}|${k}`);
-function wyrPick(q,c){ gSet(`wyr|${q.id}|${me}`, {c, at:Date.now()}); payOnce(`wyrpick|${q.id}`,1,""); const o=wyrAns(q,other(me)); if(o) wyrPay(q); render(); }
-function wyrPay(q){ /* +1 heart each for picking the same; each phone pays itself once */
+let totReveal=null;
+function wyrPick(q,c){ gSet(`wyr|${q.id}|${me}`, {c, at:Date.now()}); payOnce(`wyrpick|${q.id}`,1,""); const o=wyrAns(q,other(me)); if(o){ wyrPay(q); totReveal={q, m:c, o:o.c, at:Date.now()}; } render(); }
+function wyrPay(q){
   const paid=lsGet("ftl_wyrpaid",[]); if(paid.includes(q.id)) return;
   const m=wyrAns(q,me), o=wyrAns(q,other(me)); if(!m||!o) return;
-  lsSet("ftl_wyrpaid", paid.concat(q.id)); if(m.c===o.c) award(me,1,"same pick");
+  lsSet("ftl_wyrpaid", paid.concat(q.id)); if(m.c===o.c) award(me,1,"same page");
+}
+function totSwipe(el, cb){ let x0=null,y0=null,dx=0,dy=0;
+  el.addEventListener("pointerdown",e=>{ if(e.target.closest("button")) return; x0=e.clientX; y0=e.clientY; dx=dy=0; el.setPointerCapture(e.pointerId); el.classList.add("dragging"); });
+  el.addEventListener("pointermove",e=>{ if(x0===null) return; dx=e.clientX-x0; dy=Math.max(0,e.clientY-y0); el.style.transform=`translate(${dx}px,${dy}px) rotate(${dx/20}deg)`;
+    el.dataset.lean = dy>60&&dy>Math.abs(dx) ? "maybe" : dx>50 ? "agree" : dx<-50 ? "nah" : ""; });
+  const end=()=>{ if(x0===null) return; el.classList.remove("dragging"); x0=null; const lean=el.dataset.lean; el.dataset.lean="";
+    if(dy>90&&dy>Math.abs(dx)) cb(2); else if(Math.abs(dx)>90) cb(dx>0?1:0); else el.style.transform=""; };
+  el.addEventListener("pointerup",end); el.addEventListener("pointercancel",end);
 }
 function viewWYR(){
-  const L=wyrList(), partner=nm(other(me)), next=L.find(q=>!wyrAns(q,me));
+  const L=wyrList(), partner=nm(other(me)), them=heShe(other(me))==="he"?"him":"her", next=L.find(q=>!wyrAns(q,me));
   L.forEach(q=>{ if(wyrAns(q,me)&&wyrAns(q,other(me))) wyrPay(q); });
-  const out=[$("p",{class:"muted",style:"margin:0;font-size:13px",text:`Pick one. ${partner} can't see your pick until ${heShe(other(me))} picks too.`})];
-  if(next) out.push($("div",{class:"form wyr"},
-    $("div",{class:"eyebrow",text:"This or that"}),
-    $("button",{class:"wyr-opt",onclick:()=>wyrPick(next,0),text:fill(next.a,me)}),
-    $("div",{class:"wyr-or",text:"or"}),
-    $("button",{class:"wyr-opt",onclick:()=>wyrPick(next,1),text:fill(next.b,me)}),
-    wyrAns(next,other(me)) ? $("p",{class:"muted",style:"margin:0;font-size:13px;text-align:center",text:`${partner} already picked. Your turn.`}) : null));
-  else out.push($("p",{class:"wp",text:"You've answered them all. New ones get added over time."}));
+  const out=[$("p",{class:"muted",style:"margin:0;font-size:14px",text:`Swipe right to agree, left to disagree, down for maybe. You see ${partner}'s answer once you've both swiped.`})];
+  if(totReveal && Date.now()-totReveal.at<60e3){ const r=totReveal, same=r.m===r.o;
+    out.push($("div",{class:"tot-reveal"+(same?" same":"")},
+      $("div",{class:"eyebrow",text: same ? "Same page 🔥" : "Not quite"}),
+      $("div",{class:"tot-q",text:r.q.t}),
+      $("div",{class:"tot-ans"},$("span",{text:`You: ${TOT_LABEL[r.m]}`}),$("span",{text:`${partner}: ${TOT_LABEL[r.o]}`})),
+      !same ? $("div",{class:"muted",style:"font-size:13px",text:`Ask ${them} about it 😏`}) : null,
+      $("button",{class:"btn small ghost",style:"align-self:flex-end","aria-label":"Dismiss",onclick:()=>{ totReveal=null; render(); },text:"Got it"})));
+  }
+  if(next){
+    const card=$("div",{class:"form tot-card"},
+      $("div",{class:"eyebrow",text:`This or that · ${L.filter(q=>!wyrAns(q,me)).length} left`}),
+      $("p",{class:"wq tot-text",text:next.t}),
+      wyrAns(next,other(me)) ? $("p",{class:"muted",style:"margin:0;font-size:13px;text-align:center",text:`${partner} already swiped this one.`}) : null,
+      $("div",{class:"tot-btns"},
+        $("button",{class:"btn wbig","aria-label":"Disagree",onclick:()=>wyrPick(next,0),text:"← Nah"}),
+        $("button",{class:"btn wbig","aria-label":"Maybe",onclick:()=>wyrPick(next,2),text:"Maybe ↓"}),
+        $("button",{class:"btn primary wbig","aria-label":"Agree",onclick:()=>wyrPick(next,1),text:"Agree →"})));
+    totSwipe(card, c=>wyrPick(next,c));
+    out.push(card);
+  } else out.push($("p",{class:"wp",text:"You've swiped them all. New ones get added over time."}));
   const done=L.filter(q=>wyrAns(q,me)).reverse();
-  if(done.length) out.push($("h3",{style:"font-size:18px;margin-top:8px",text:"Your picks"}), ...done.map(q=>{
-    const m=wyrAns(q,me), o=wyrAns(q,other(me)), opt=c=>fill(c?q.b:q.a,me);
+  if(done.length) out.push($("h3",{style:"font-size:18px;margin-top:8px",text:"Where you both landed"}), ...done.map(q=>{
+    const m=wyrAns(q,me), o=wyrAns(q,other(me));
     return $("div",{class:"g-row"},
-      $("div",{class:"g-q",text:`${fill(q.a,me)} or ${fill(q.b,me)}?`}),
-      $("div",{class:"g-line",text:`You: ${opt(m.c)}`}),
-      $("div",{class:"g-line"+(o?"":" muted"),text: o ? `${partner}: ${opt(o.c)}` : `${partner} hasn't picked yet`}),
-      o ? $("div",{class:"g-tag",text: m.c===o.c ? "Same pick 🔥" : `Different picks. Ask ${heShe(other(me))==="he"?"him":"her"} why 😏`}) : null);
+      $("div",{class:"g-line",style:"font-size:15px",text:q.t}),
+      $("div",{class:"tot-ans"},$("span",{text:`You: ${TOT_LABEL[m.c]}`}),$("span",{class:o?"":"muted",text: o ? `${partner}: ${TOT_LABEL[o.c]}` : `${partner}: not yet`})),
+      o ? $("div",{class:"g-tag",text: m.c===o.c ? "Same page 🔥" : (m.c===2||o.c===2) ? "Somewhere in the middle" : `You don't agree. Ask ${them} why 😏`}) : null);
   }));
   return out;
 }
@@ -1252,7 +1277,7 @@ function gWaiting(){
 }
 const GAMES = [
   {id:"match",name:"Same Page",emoji:"💞",sub:"Swipe yes or no. Only the yeses you share show up",view:viewMatch},
-  {id:"wyr",name:"This or That",emoji:"🤔",sub:"Pick one, then see where they landed",view:viewWYR},
+  {id:"wyr",name:"This or That",emoji:"🤔",sub:"Agree, disagree or maybe. Then see theirs",view:viewWYR},
   {id:"td",name:"Run It",emoji:"😈",sub:"Send a truth or a dare. No backing out",view:viewTD},
   {id:"dice",name:"Dice",emoji:"🎲",sub:"Roll it, then tell them how you'd do it",view:viewDice},
   {id:"ttl",name:"Cap or Facts",emoji:"🤥",sub:"Two facts, one cap. Catch the cap",view:viewTTL}
@@ -1290,7 +1315,7 @@ function restartGame(id){
     const keys=Object.keys(S.games||{}).filter(k=>pre.some(p=>k.startsWith(p)) && S.games[k]);
     if(keys.length){ const patch={}; keys.forEach(k=>patch[k]=null); S.games=Object.assign({}, S.games, patch); save("games", keys); }
     if(id==="wyr") lsSet("ftl_wyrpaid", []);
-    lsSet("ftl_started_"+id, false);
+    lsSet("ftl_started_"+id, false); gSet(`open|${id}`, null);
     toast(`${(PICKS.find(p=>p.id===id)||{}).name} starts over for both of you`);
   }
   lsSet("ftl_game", id); openSetup(id);
@@ -1299,20 +1324,20 @@ function restartGame(id){
 const GAME_INFO = {
   cards:"Take turns drawing cards and reading them to each other on the phone. The night starts soft and warms up every few cards.",
   match:"Swipe yes or no on things to try. Only what you BOTH said yes to ever shows up.",
-  wyr:"Pick one of two. You see each other's picks once you've both answered.",
+  wyr:"One statement at a time. Swipe right to agree, left to disagree, down for maybe. You see each other's answers once you've both swiped.",
   td:"Send a truth or a dare. They answer on their own time.",
   dice:"Roll an action, a spot and a how, then tell them how you'd do it.",
   ttl:"Write two facts and one cap. They have to call out the cap."
 };
 const MODES = {
-  wyr:{label:"Questions", def:"both", opts:[["sweet","Sweet & fun"],["spicy","Spicy"],["both","Mix"]]},
+  wyr:{label:"Statements", def:"both", opts:[["sweet","Sweet & fun"],["spicy","Spicy"],["both","Mix"]]},
   match:{label:"What to swipe on", def:"both", opts:[["out","Out of bed"],["bed","In bed"],["both","Both"]]},
   td:{label:"Truths and dares", def:"both", opts:[["sweet","Sweet"],["spicy","Spicy"],["both","Mix"]]},
   dice:{label:"Dice", def:"spicy", opts:[["soft","Soft & teasing"],["spicy","Spicy"]]},
   ttl:{label:"Theme", def:"anything", opts:[["anything","Anything"],["me","About you"],["us","About us"],["spicy","Spicy"]]}
 };
 let setupGame=null, cardStart=0, openCustomize=false;
-const gameStarted = id => id==="cards" ? nightN()>0 : !!lsGet("ftl_started_"+id,false);
+const gameStarted = id => id==="cards" ? (nightN()>0 && S.live.ended!==ymd(new Date())) : !!(gGet(`open|${id}`) || (lsGet("ftl_started_"+id,false) && gGet(`open|${id}`)===null && !gGet(`closed|${id}`)));
 function openSetup(id){ closeChooser(); setupGame=id; cardStart=0; tab="setup"; render(); window.scrollTo(0,0); }
 function enterGame(id){ if(gameStarted(id)) openGame(id); else openSetup(id); }
 function decksBox(){
@@ -1330,9 +1355,9 @@ function startSetupGame(){
   const id=setupGame;
   if(id==="cards"){
     const t=ymd(new Date()), L=paceLens(), off=[0,L[0],L[0]+L[1],L[0]+L[1]+L[2]][cardStart]||0;
-    if(nightN()===0 || cardStart>0){ S.live=Object.assign({}, S.live, {card:null, by:null, n:off, night:t, history:[], reveal:null, cool:"", ys:0}); save("live"); }
+    if(nightN()===0 || cardStart>0 || S.live.ended===t){ S.live=Object.assign({}, S.live, {card:null, by:null, n:off, night:t, history:[], reveal:null, cool:"", ys:0, ended:""}); save("live"); }
     lsSet("ftl_lvl_"+t, null);
-  } else lsSet("ftl_started_"+id, true);
+  } else { lsSet("ftl_started_"+id, true); gSet(`open|${id}`, {at:Date.now(), by:me}); gSet(`closed|${id}`, null); }
   openGame(id);
 }
 function viewSetup(){
@@ -1360,20 +1385,81 @@ function viewSetup(){
   out.push($("button",{class:"start",onclick:startSetupGame,text: P.id==="cards"&&nightN()>0&&cardStart===0 ? "Keep going" : "Start"}));
   return out;
 }
+/* every game that's going right now, with where it stands */
+function cardsStatus(){ const c=S.live.card, P=nm(other(me||"a")); if(!c||nightN()===0) return {t:"Your turn",hot:true};
+  if(!c.done) return S.live.by===me ? {t:"Your card is up",hot:true} : {t:`${nm(S.live.by)} has a card`,hot:false};
+  return other(S.live.by)===me ? {t:"Your turn",hot:true} : {t:`${P}'s turn`,hot:false}; }
+function openGames(){ const w=gWaiting(); return PICKS.filter(p=>gameStarted(p.id)).map(p=>Object.assign({},p,{
+  status: p.id==="cards" ? cardsStatus().t : w[p.id] ? `${w[p.id]} waiting on you` : "Your move, anytime",
+  hot: p.id==="cards" ? cardsStatus().hot : !!w[p.id] })); }
 function playEntry(){
-  if(nightN()>0){ lsSet("ftl_game","cards"); tab="play"; render(); window.scrollTo(0,0); return; }
-  const s=selGame(); if(s!=="cards" && gameStarted(s)){ openGame(s); return; }
-  openChooser("change");
+  const open=openGames();
+  if(open.length===1){ lsSet("ftl_game",open[0].id); openGame(open[0].id); return; }
+  openChooser(open.length ? "open" : "change");
+}
+function endGame(id){
+  if(id==="cards"){ S.live=Object.assign({}, S.live, {ended:ymd(new Date())}); save("live"); }
+  else { lsSet("ftl_started_"+id,false); gSet(`open|${id}`, null); gSet(`closed|${id}`, {at:Date.now(), by:me}); }
+  closeChooser(); toast(`${(PICKS.find(p=>p.id===id)||{}).name} ended. Hearts and answers stay.`); tab="home"; render(); window.scrollTo(0,0);
+}
+/* progress line + bar for each game */
+function progressOf(id){
+  const o=other(me||"a"), P=nm(o);
+  if(id==="cards"){ const n=nightN(), lv=heatFor(Math.max(1,n)), li=HEAT.indexOf(lv); return {text:`${LEVEL_EMOJI[li]} ${lv.name} \u00b7 ${n} card${n===1?"":"s"} in \u00b7 ${cardsStatus().t.replace(/^Your/,"your")}`, pct:Math.round(100*(li+Math.min(1,(n-[0,...paceLens()].slice(0,li+1).reduce((a,b)=>a+b,0))/Math.max(1,(paceLens()[li]||6))))/4)}; }
+  if(id==="match"){ const L=matchList(), d=L.filter(x=>mAns(x,me)).length, m=matches().length; return {text:`${d} of ${L.length} answered \u00b7 ${m} match${m===1?"":"es"}`, pct:Math.round(100*d/Math.max(1,L.length))}; }
+  if(id==="wyr"){ const L=wyrList(), d=L.filter(q=>wyrAns(q,me)).length, same=L.filter(q=>{ const a=wyrAns(q,me), b=wyrAns(q,o); return a&&b&&a.c===b.c; }).length; return {text:`${d} of ${L.length} swiped \u00b7 same page on ${same}`, pct:Math.round(100*d/Math.max(1,L.length))}; }
+  if(id==="td"){ const A=tdAll(), mine=A.filter(x=>x.to===me&&!tdAns(x.id)).length, sent=A.filter(x=>x.by===me).length, ans=A.filter(x=>x.by===me&&tdAns(x.id)).length; return {text: mine?`${mine} waiting on you`:`${ans} of ${sent} you sent answered`, pct: sent?Math.round(100*ans/sent):0}; }
+  if(id==="dice"){ const A=diceAll(), mine=A.filter(d=>d.by===o&&!gGet(`dicer|${d.id}`)).length; return {text: mine?`${P} rolled for you`:`${A.length} roll${A.length===1?"":"s"} so far`, pct: Math.min(100,A.length*10)}; }
+  if(id==="ttl"){ const A=ttlAll(), mine=A.filter(t=>t.by===o&&!ttlGuess(t.id)).length, caught=A.filter(t=>t.by===o&&ttlGuess(t.id)&&ttlGuess(t.id).g===t.lie).length, guessed=A.filter(t=>t.by===o&&ttlGuess(t.id)).length;
+    return {text: mine?`${P} left you one to guess`:`You've caught ${caught} of ${guessed}`, pct: guessed?Math.round(100*caught/guessed):0}; }
+  return {text:"",pct:0};
+}
+function gamesInPlayCard(){
+  if(!me) return null; const open=openGames(); if(!open.length) return null;
+  return $("div",{class:"form"},
+    $("h3",{style:"font-size:20px",text:"Games in play"}),
+    ...open.map(p=>{ const pr=progressOf(p.id);
+      return $("button",{class:"gip"+(p.hot?" hot":""),onclick:()=>openChooser("manage:"+p.id),"aria-label":`${p.name}: ${pr.text}. Resume, restart or end.`},
+        $("span",{class:"gt-emoji",style:"font-size:24px",text:p.emoji}),
+        $("span",{class:"stack",style:"gap:4px;min-width:0;flex:1;text-align:left"},
+          $("span",{class:"row",style:"justify-content:space-between;gap:8px"},$("span",{class:"gt-name",style:"font-size:17px",text:p.name}),p.hot?$("span",{class:"gt-badge",style:"position:static",text:p.id==="cards"?"your turn":"your move"}):null),
+          $("span",{class:"gt-sub",text:pr.text}),
+          $("span",{class:"np-track"},$("span",{class:"np-fill",style:`width:${Math.max(4,Math.min(100,pr.pct))}%`})))); }),
+    $("button",{class:"btn small ghost",style:"align-self:flex-start",onclick:()=>openChooser("change"),text:"+ Start another game"}));
 }
 let chooserMode="main";
 function closeChooser(){ const el=document.getElementById("chooser"); if(el) el.remove(); chooserMode="main"; }
 function openChooser(mode){
-  closeChooser(); chooserMode=mode||"main"; const cur=PICKS.find(p=>p.id===selGame())||PICKS[0], cardsGoing=nightN()>0;
+  closeChooser(); chooserMode=mode||"main"; let cur=PICKS.find(p=>p.id===selGame())||PICKS[0], cardsGoing=nightN()>0;
   const sheet=$("div",{class:"sheet",role:"dialog","aria-modal":"true","aria-label":"Start a game"});
   const wrap=$("div",{id:"chooser",class:"sheet-wrap",onclick:e=>{ if(e.target.id==="chooser") closeChooser(); }}, sheet);
   const add=(...a)=>sheet.append(...a.filter(Boolean));
   const draw=()=>{ sheet.innerHTML="";
-    if(chooserMode==="main"){
+    if(chooserMode.startsWith("manage:")){
+      const id=chooserMode.slice(7); cur=PICKS.find(p=>p.id===id)||cur; const pr=progressOf(id);
+      add($("div",{class:"eyebrow",text:"In play"}), $("h3",{class:"wq",style:"font-size:24px;margin:0",text:`${cur.emoji} ${cur.name}`}),
+        $("p",{class:"muted",style:"margin:0;font-size:14px",text:pr.text}),
+        $("button",{class:"btn primary wbig",onclick:()=>{ lsSet("ftl_game",id); openGame(id); },text:"Resume"}),
+        $("button",{class:"btn wbig",onclick:()=>{ lsSet("ftl_game",id); chooserMode="restart"; draw(); },text:"Restart"}),
+        $("button",{class:"btn wbig",onclick:()=>{ chooserMode="end:"+id; draw(); },text:"End it now"}),
+        $("button",{class:"btn ghost",style:"align-self:center",onclick:closeChooser,text:"Not now"}));
+    } else if(chooserMode.startsWith("end:")){
+      const id=chooserMode.slice(4); cur=PICKS.find(p=>p.id===id)||cur;
+      add($("div",{class:"eyebrow",text:"End game"}), $("h3",{class:"wq",style:"font-size:22px;margin:0",text:`End ${cur.name} now?`}),
+        $("p",{class:"wp",style:"margin:0",text: id==="cards" ? `Tonight's game closes on both phones. Hearts you earned and cards you kept stay. Next time you play, it starts fresh.` : `It closes for both of you. Answers, matches and hearts stay, and you can pick it back up anytime.`}),
+        $("button",{class:"btn primary wbig",onclick:()=>endGame(id),text:"Yes, end it"}),
+        $("button",{class:"btn ghost",style:"align-self:center",onclick:()=>{ chooserMode="manage:"+id; draw(); },text:"Never mind"}));
+    } else if(chooserMode==="open"){
+      const open=openGames();
+      add($("div",{class:"eyebrow",text:"Games in play"}), $("h3",{class:"wq",style:"font-size:24px;margin:0",text:"Pick up where you left off"}),
+        $("div",{class:"pick-list"}, ...open.map(p=>$("div",{class:"pick-wrap"},
+          $("button",{class:"pick"+(p.hot?" on":""),onclick:()=>{ lsSet("ftl_game",p.id); openGame(p.id); }},
+            $("span",{class:"gt-emoji",style:"font-size:24px",text:p.emoji}),
+            $("span",{class:"stack",style:"gap:0;min-width:0;text-align:left"},$("span",{class:"gt-name",style:"font-size:17px",text:p.name}),$("span",{class:"gt-sub",style:p.hot?"color:var(--rose)":"",text:p.status}))),
+          $("button",{class:"btn small ghost","aria-label":`Restart ${p.name}`,onclick:()=>{ lsSet("ftl_game",p.id); cur=PICKS.find(x=>x.id===p.id); chooserMode="restart"; draw(); },text:"Restart"})))),
+        $("button",{class:"btn wbig",onclick:()=>{ chooserMode="change"; draw(); },text:"Start another game"}),
+        $("button",{class:"btn ghost",style:"align-self:center",onclick:closeChooser,text:"Not now"}));
+    } else if(chooserMode==="main"){
       const going = cur.id==="cards" ? cardsGoing : true;
       add($("div",{class:"eyebrow",text:"Start a game"}), $("h3",{class:"wq",style:"font-size:24px;margin:0",text:`${cur.emoji} ${cur.name}`}),
         $("button",{class:"btn primary wbig",onclick:()=>enterGame(cur.id),text: gameStarted(cur.id) ? "Keep going" : "Start"}),
@@ -1384,14 +1470,14 @@ function openChooser(mode){
       add($("div",{class:"eyebrow",text:"Restart"}), $("h3",{class:"wq",style:"font-size:22px;margin:0",text:`Start ${cur.name} over?`}),
         $("p",{class:"wp",style:"margin:0",text: cur.id==="cards" ? `Tonight goes back to Slow Jams with a fresh deck, on both phones. Hearts you already earned stay.` : `This clears ${cur.name} for both of you so you can play it fresh. Hearts you already earned stay.`}),
         $("button",{class:"btn primary wbig",onclick:()=>restartGame(cur.id),text:"Yes, start over"}),
-        $("button",{class:"btn ghost",style:"align-self:center",onclick:()=>{ chooserMode="main"; draw(); },text:"Never mind"}));
+        $("button",{class:"btn ghost",style:"align-self:center",onclick:()=>{ chooserMode=openGames().length>1?"open":"main"; draw(); },text:"Never mind"}));
     } else {
       const w=gWaiting();
       add($("div",{class:"eyebrow",text:"Change game"}), $("h3",{class:"wq",style:"font-size:22px;margin:0",text:"What are we playing?"}),
         $("div",{class:"pick-list"}, ...PICKS.map(p=>$("button",{class:"pick"+(p.id===cur.id?" on":""),onclick:()=>{ lsSet("ftl_game",p.id); enterGame(p.id); }},
           $("span",{class:"gt-emoji",style:"font-size:24px",text:p.emoji}),
           $("span",{class:"stack",style:"gap:0;min-width:0;text-align:left"},$("span",{class:"gt-name",style:"font-size:17px",text:p.name}),$("span",{class:"gt-sub",text:p.sub})),
-          w[p.id] ? $("span",{class:"gt-badge",style:"position:static;margin-left:auto",text:String(w[p.id])}) : null))),
+          w[p.id] ? $("span",{class:"gt-badge",style:"position:static;margin-left:auto",text:String(w[p.id])}) : gameStarted(p.id) ? $("span",{class:"gt-badge soft",style:"position:static;margin-left:auto",text:"in play"}) : null))),
         $("button",{class:"btn ghost",style:"align-self:center",onclick:()=>{ chooserMode="main"; draw(); },text:"Back"}));
     } };
   draw(); document.body.append(wrap);
@@ -1569,7 +1655,7 @@ function viewHome(){
     $("div",{class:"eyebrow",text:"Right now"}),
     $("ul",{class:"now-list"},...items.slice(0,4).map(t=>$("li",{text:t}))),
     gamesWaiting ? $("button",{class:"start",onclick:()=>{ tab="games"; gameTab=null; render(); window.scrollTo(0,0); },text:`See what ${partner} sent`}) : null,
-    $("button",{class:"start"+(gamesWaiting?" secondary":""),onclick:()=>{ if(!me){askWho();return;} openChooser(); },text:started?"Keep going":"Start a game"}));
+    $("button",{class:"start"+(gamesWaiting?" secondary":""),onclick:()=>{ if(!me){askWho();return;} openChooser(openGames().length>1?"open":"main"); },text:openGames().length>1?`Your games (${openGames().length})`:started?"Keep going":"Start a game"}));
   /* Notes */
   const theirs=(S.notes||{})[other(me||"a")], mine=(S.notes||{})[me||"a"];
   const noteIn=$("textarea",{id:"noteIn",maxlength:"200",placeholder:`Leave ${partner} a little something…`});
@@ -1597,7 +1683,7 @@ function viewHome(){
   return [
     header(),
     $("div",{class:"hello"},$("div",{class:"eyebrow",text: g.part==="late" ? "After hours" : g.part==="morning" ? "Good morning" : g.part==="day" ? "Hey you" : "This evening"}),$("p",{class:"hello-text",text:g.text})),
-    tonight, dailyCard(), gamesCard(), undressCard(), notes, jarBox,
+    tonight, gamesInPlayCard(), dailyCard(), openGames().length?null:gamesCard(), undressCard(), notes, jarBox,
     $("button",{class:"btn ghost",style:"align-self:center",onclick:()=>{ tab="memories"; render(); window.scrollTo(0,0); },text:`\u2661 Kept cards (${(S.memories.items||[]).length})`})
   ];
 }
