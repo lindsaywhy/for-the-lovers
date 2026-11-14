@@ -2348,6 +2348,9 @@ const LEVEL_EMOJI = ["🎶","💕","🌙","🔥"];
 const LEVEL_LINE = ["Tonight starts here. Ease into it.","The flirting starts now.","Things are turning up.","Grown and spicy. No skipping."];
 function checkLevelUp(){
   const n=nightN(); if(!n || !room_ok()) return;
+  /* Level screens belong to Pillow Talk: only show them on Play, never over the boundaries walkthrough or another tab.
+     Not marked as seen until then, so the screen still shows once you open Play. */
+  if(tab!=="play" || (typeof wiz!=="undefined" && wiz!==null)) return;
   const L=HEAT.indexOf(heatFor(n)), key="ftl_lvl_"+ymd(new Date()), prev=lsGet(key,null);
   if(prev!==null && L<=prev) return;
   lsSet(key,L);
