@@ -1397,12 +1397,9 @@ function openChooser(mode){
   draw(); document.body.append(wrap);
 }
 function nextPieceBar(){
-  if(!me) return null; const t=other(me), P=piecesOf(t), i=removedOf(t).length, h=heartsOf(me);
+  if(!me) return null; const t=other(me), P=piecesOf(t), i=removedOf(t).length;
   if(i>=P.length) return $("button",{class:"npbar done",onclick:()=>{tab="avatars";render();window.scrollTo(0,0);}},$("span",{text:`${nm(t)} is down to nothing \ud83d\udd25 Tap to see`}));
-  const cost=pieceCosts(t)[i], pct=Math.min(100,Math.round(100*h/cost)), ready=h>=cost;
-  return $("button",{class:"npbar"+(ready?" ready":""),onclick:()=>{tab="avatars";render();window.scrollTo(0,0);},"aria-label":`Next: ${hisHer(t)} ${pieceName(t,i)}. ${Math.min(h,cost)} of ${cost} hearts.`},
-    $("span",{class:"np-top"},$("span",{text: ready ? `Ready: take off ${hisHer(t)} ${pieceName(t,i)} \ud83d\ude0f` : `Next: ${hisHer(t)} ${pieceName(t,i)}`}),$("span",{class:"np-n",text:`${Math.min(h,cost)} / ${cost} \u2665`})),
-    $("span",{class:"np-track"},$("span",{class:"np-fill",style:`width:${pct}%`})));
+  const m=undressMeter(t); m.setAttribute("role","button"); m.tabIndex=0; m.style.cursor="pointer"; m.onclick=()=>{tab="avatars";render();window.scrollTo(0,0);}; return m;
 }
 /* nudge by text after a move in an async game */
 let lastSent=null;
@@ -2357,10 +2354,50 @@ function avatarEl(k, opts){ const d=$("div",{class:"avwrap"+(opts&&opts.small?" 
 /* ---------- hearts, undressing, coupons ---------- */
 /* ---------- hearts, undressing, coupons ---------- */
 const HEARTS_PER_LEVEL = [1,2,3,3];
+function heartBurst(n){
+  const target=document.querySelector(".hdr-hearts"), tr=target?target.getBoundingClientRect():{left:innerWidth-40,top:30,width:0,height:0};
+  for(let i=0;i<Math.min(6,Math.max(1,n));i++){
+    const s=document.createElement("span"); s.className="burst"; s.textContent="♥";
+    const x0=innerWidth/2+(Math.random()*80-40), y0=innerHeight*0.6+(Math.random()*40-20);
+    s.style.left=x0+"px"; s.style.top=y0+"px";
+    s.style.setProperty("--dx",(tr.left+tr.width/2-x0)+"px"); s.style.setProperty("--dy",(tr.top+tr.height/2-y0)+"px");
+    s.style.animationDelay=(i*90)+"ms"; document.body.append(s); setTimeout(()=>s.remove(),1300+i*90);
+  }
+  setTimeout(()=>{ const t=document.querySelector(".hdr-hearts"); if(t){ t.classList.remove("pop"); void t.offsetWidth; t.classList.add("pop"); } },700);
+}
+/* hearts earned tonight (never spent) drive the undressing; the balance is for the reward bank */
+function earnedTonight(k){ const e=(S.hearts||{})["e_"+k]; return e && e.night===today_() ? (+e.n||0) : 0; }
 function award(k, n, why){
-  S.hearts = Object.assign({}, S.hearts||{}, {[k]: heartsOf(k)+n});
-  save("hearts",[k]);
-  if(k===me) toast(`+${n} ♥${why?" "+why:""}`);
+  const patch={[k]: heartsOf(k)+n}; if(k===me) patch["e_"+k]={night:today_(), n:earnedTonight(k)+n};
+  S.hearts = Object.assign({}, S.hearts||{}, patch);
+  save("hearts", Object.keys(patch));
+  if(k===me){ heartBurst(n); toast(`+${n} ♥${why?" "+why:""}`); setTimeout(autoUndress, 650); }
+}
+function undressBase(t){ const A=avOf(t); return (A.night===today_() && A.base) ? A.base : 0; }
+function undressProgress(t){
+  const costs=pieceCosts(t), have=Math.max(0, earnedTonight(other(t))-undressBase(t)), i=removedOf(t).length;
+  let cum=0, target=0; for(const c of costs){ cum+=c; if(have>=cum) target++; else break; }
+  const prev=costs.slice(0,i).reduce((a,b)=>a+b,0), need=prev+(costs[i]||0);
+  return {have, target, prev, need, cost:costs[i]||0, into:Math.max(0,have-prev)};
+}
+function autoUndress(){
+  if(!me) return; const t=other(me), P=piecesOf(t), rem=removedOf(t), {target}=undressProgress(t);
+  if(rem.length>=target || rem.length>=P.length) return;
+  const key=P[rem.length][0], removed=rem.concat(key);
+  flyOff(t, key);
+  setAv(t, {removed, night:today_(), round:avOf(t).night===today_()?(avOf(t).round||0):0, base:undressBase(t)});
+  try{ navigator.vibrate && navigator.vibrate(40); }catch(e){}
+  if(removed.length===P.length){ winReward(t); setTimeout(()=>bounceAv(t),40); return; }
+  if(typeof safeRender==="function") safeRender(); else render();
+  setTimeout(()=>bounceAv(t), 40);
+  if(removed.length<target) setTimeout(autoUndress, 800);
+}
+function undressMeter(t){
+  const P=piecesOf(t), i=removedOf(t).length; if(i>=P.length) return null;
+  const pr=undressProgress(t), pct=Math.min(100,Math.round(100*pr.into/Math.max(1,pr.cost)));
+  return $("div",{class:"npbar",role:"img","aria-label":`Next: ${hisHer(t)} ${pieceName(t,i)}. ${Math.min(pr.into,pr.cost)} of ${pr.cost} hearts earned tonight.`},
+    $("span",{class:"np-top"},$("span",{text:`Next off: ${hisHer(t)} ${pieceName(t,i)}`}),$("span",{class:"np-n",text:`${Math.min(pr.into,pr.cost)} / ${pr.cost} ♥`})),
+    $("span",{class:"np-track"},$("span",{class:"np-fill",style:`width:${pct}%`})));
 }
 function pieceName(k,i){ return (piecesOf(k)[i]||[])[1]||""; }
 function hisHer(k){ return k==="b" ? "his" : "her"; }
@@ -2399,7 +2436,7 @@ function undress(){
   setTimeout(()=>bounceAv(t), 40);
 }
 function pickCostume(t, id){
-  setAv(t, {costume:{id, night:today_(), by:me}, removed:[], night:today_(), round:0});
+  setAv(t, {costume:{id, night:today_(), by:me}, removed:[], night:today_(), round:0, base:earnedTonight(me)});
   toast(`${nm(t)} is wearing ${COSTUMES[t][id].name} tonight \ud83d\ude0f`); render();
 }
 function winReward(t){
@@ -2413,7 +2450,7 @@ function winReward(t){
 }
 function redress(){
   const t=other(me), A=avOf(t);
-  setAv(t, {removed:[], night:today_(), round:(A.night===today_()?(A.round||0):0)+1}); render();
+  setAv(t, {removed:[], night:today_(), round:(A.night===today_()?(A.round||0):0)+1, base:earnedTonight(me)}); render();
 }
 function addCoupon(text){
   const C=couponsOf(me), item={id:Date.now().toString(36), text:text.slice(0,120), at:Date.now()};
@@ -2467,15 +2504,15 @@ function undressCard(){
   const t=other(me||"a"), P=piecesOf(t), i=removedOf(t).length, done=i>=P.length, h=heartsOf(me||"a"), costs=pieceCosts(t);
   const A=avOf(t), picked=A.costume && A.costume.night===today_(), C=COSTUMES[t][costumeIdOf(t)];
   if(pickingCostume) return costumePicker(t);
-  const btn = done ? $("button",{class:"btn primary",onclick:redress,text:`Dress ${himHer(t)} back up`})
-    : undressBtn(t,i,h,costs[i]);
+  const pr=undressProgress(t);
+  const btn = done ? $("button",{class:"btn primary",onclick:redress,text:`Dress ${himHer(t)} back up`}) : undressMeter(t);
   return $("div",{class:"form undress"},
-    $("div",{class:"row",style:"justify-content:space-between"},$("h3",{style:"font-size:20px",text:`Undress ${nm(t)}`}),$("span",{class:"hearts-pill",text:`${h} \u2665`})),
+    $("div",{class:"row",style:"justify-content:space-between"},$("h3",{style:"font-size:20px",text:`Undress ${nm(t)}`}),$("span",{class:"hearts-pill",text:`${earnedTonight(me||"a")} \u2665 tonight`})),
     $("div",{class:"undress-row"},
       $("button",{class:"avbtn","aria-label":`Open ${nm(t)}'s avatar`,onclick:()=>{tab="avatars";render();window.scrollTo(0,0);}},avatarEl(t,{small:true,label:nm(t)+"'s avatar"})),
       $("div",{class:"stack",style:"min-width:0;flex:1"},
         $("span",{class:"muted",style:"font-size:13px",text:`Tonight: ${C.emoji} ${C.name}`}),
-        $("p",{class:"wp",style:"font-size:14px",text: done ? `${nm(t)} is down to nothing \ud83d\udd25` : h<costs[i] ? `Play cards to earn hearts. ${costs[i]-h} more and ${hisHer(t)} ${pieceName(t,i)} ${/s$/.test(pieceName(t,i))&&!/(dress|ss)$/.test(pieceName(t,i))?"come":"comes"} off.` : `You've got enough. Go ahead \ud83d\ude0f`}),
+        $("p",{class:"wp",style:"font-size:14px",text: done ? `${nm(t)} is down to nothing \ud83d\udd25` : `Every card and game you play tonight takes something off. ${Math.max(0,pr.cost-pr.into)} more \u2665 for ${hisHer(t)} ${pieceName(t,i)}.`}),
         btn,
         $("button",{class:"btn small ghost",style:"align-self:flex-start",onclick:()=>{pickingCostume=true;render();},text: picked ? "Change costume" : `Pick ${hisHer(t)} costume`}))));
 }
@@ -2514,14 +2551,14 @@ function viewAvatars(){
   const cIn=$("input",{id:"cpIn",maxlength:"120",placeholder:`Something ${nm(t)} would love from you`});
   return [header(),
     rewardsSeg(),
-    $("p",{class:"muted",style:"margin:0;font-size:13px",text:`Spend hearts to undress ${nm(t)}. Fully undressed = you win one of ${hisHer(t)} coupons.`}),
+    $("p",{class:"muted",style:"margin:0;font-size:13px",text:`Every heart you earn tonight takes something off ${nm(t)}, automatically. It's free: your hearts stay in the bank for rewards. Fully undressed = you win one of ${hisHer(t)} coupons.`}),
     pickingCostume ? costumePicker(t) : null,
     $("div",{class:"form",style:"align-items:center"},
       $("div",{class:"row",style:"justify-content:space-between;align-self:stretch"},$("h3",{style:"font-size:20px",text:`${nm(t)} \u00b7 ${C.emoji} ${C.name}`}),$("button",{class:"btn small",onclick:()=>{pickingCostume=true;render();window.scrollTo(0,0);},text:"Costume"})),
       avatarEl(t,{label:nm(t)+"'s avatar",mid:true}),
       done ? $("button",{class:"btn primary",onclick:redress,text:`Dress ${himHer(t)} back up for round ${(A.round||0)+2}`})
-        : undressBtn(t,i,h,costs[i]),
-      $("div",{class:"pieces"},P.map(([n,label],j)=>$("span",{class:"chip"+(j<i?" paused":""),text:(j<i?"✓ ":"")+label+(j>=i?` · ${costs[j]}♥`:"")})))),
+        : undressMeter(t),
+      $("div",{class:"pieces"},P.map(([n,label],j)=>$("span",{class:"chip"+(j<i?" paused":""),text:(j<i?"✓ ":"")+label+(j>=i?` · at ${costs.slice(0,j+1).reduce((a,b)=>a+b,0)}♥`:"")})))),
     $("div",{class:"form",style:"align-items:center"},
       $("div",{class:"row",style:"justify-content:space-between;align-self:stretch"},$("h3",{style:"font-size:20px",text:"You"}),$("button",{class:"btn small",onclick:()=>{editAv=!editAv;render();},text:editAv?"Done":"Customize"})),
       avatarEl(me||"a",{label:"Your avatar",mid:true}),
@@ -2567,7 +2604,7 @@ function viewOnboard(){
       next(),back());
   } else if(ob===3){
     c.push($("h2",{class:"wq",text:"Hearts and avatars"}),
-      $("p",{class:"wp",text:`Every card and every game you play earns hearts. Each night you pick a costume for ${partner}'s avatar, then spend hearts taking it off one piece at a time. It takes about one good night of cards. Undress ${me==="b"?"her":"him"} completely and you win one of the coupons ${me==="b"?"she":"he"} wrote for you.`}),
+      $("p",{class:"wp",text:`Every card and every game you play earns hearts. Each night you pick a costume for ${partner}'s avatar, and every heart you earn takes a piece off, automatically. Your hearts still go in the bank for real-life rewards. Undress ${me==="b"?"her":"him"} completely and you win one of the coupons ${me==="b"?"she":"he"} wrote for you.`}),
       $("p",{class:"wp",text:"First, make your avatar look like you."}),
       $("div",{style:"align-self:center"},avatarEl(me||"a",{label:"Your avatar"})),
       avatarEditor(), next(), back());
