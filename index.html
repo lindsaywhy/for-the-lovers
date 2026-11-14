@@ -265,7 +265,12 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
 .sticky{background:#fdf3f5;color:#163024;border-radius:6px 18px 18px 18px;padding:14px 16px;transform:rotate(-1.2deg);box-shadow:0 8px 20px rgba(0,0,0,.3)}
 .sticky-text{font-family:"Caveat",cursive;font-size:26px;line-height:1.15;overflow-wrap:anywhere}
 .sticky-from{font-size:13px;color:#5b7a6a;margin-top:6px}
-.jar{display:flex;flex-wrap:wrap;gap:4px;min-height:44px;padding:12px;border:2px solid var(--line);border-top-width:6px;border-radius:14px 14px 28px 28px;background:var(--surface)}
+.jar-stage{display:flex;justify-content:center;padding:4px 0 0}
+.jar-svg{width:min(240px,70vw);height:auto;overflow:visible}
+.jar-svg .jh.drop{animation:jarDrop .9s cubic-bezier(.3,1.4,.5,1) both;animation-delay:var(--d,0s)}
+@keyframes jarDrop{0%{transform:translateY(-190px);opacity:0}25%{opacity:1}100%{transform:none;opacity:1}}
+@media (prefers-reduced-motion:reduce){.jar-svg .jh.drop{animation:none}}
+.jar-next{display:flex;flex-direction:column;gap:6px}
 .jh{width:22px;height:20px;display:inline-block}
 .jh svg{width:100%;height:100%;fill:var(--rose);display:block}
 .levelup{position:fixed;inset:0;z-index:40;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;text-align:center;padding:24px;background:radial-gradient(circle at 50% 45%,#1f4a35,#0a1711 70%);cursor:pointer}
@@ -1906,21 +1911,74 @@ function viewHome(){
     mine && mine.text ? $("div",{class:"row",style:"justify-content:space-between;align-items:flex-start;gap:8px"},
       $("span",{class:"muted",style:"font-size:13px;min-width:0",text:`${partner} sees: “${mine.text}”`}),
       $("button",{class:"btn small ghost",onclick:()=>sendNote(""),text:"Take back"})) : null);
-  /* Our jar: one heart for every night you've played */
-  const nights=new Set(S.nights.dates||[]).size, shown=Math.min(nights,60);
-  const jar=$("div",{class:"jar","aria-label":`${nights} hearts in your jar`});
-  if(!shown) jar.append($("span",{class:"jar-empty",text:"\u2661  \u2661  \u2661"}));
-  for(let i=0;i<shown;i++){ const s=$("span",{class:"jh"}); s.innerHTML=HEART; s.style.transform=`rotate(${((i*37)%30)-15}deg)`; jar.append(s); }
-  const jarBox=$("div",{class:"form jarbox"},
-    $("h3",{style:"font-size:20px",text:"Our jar"}),
-    jar,
-    $("p",{class:"muted",style:"margin:0;font-size:13px",text: nights===0 ? "Every night you play drops a heart in here." : nights===1 ? "One heart so far. Every night you play drops another one in." : `${nights} hearts and counting. Every night you play drops another one in.`}));
+  /* Our jar: a glass jar that fills with one heart for every night you've played */
+  const jarBox=jarCard();
   return [
     header(),
     $("div",{class:"hello"},$("div",{class:"eyebrow",text: g.part==="late" ? "After hours" : g.part==="morning" ? "Good morning" : g.part==="day" ? "Hey you" : "This evening"}),$("p",{class:"hello-text",text:g.text})),
     tonight, alertsCard(true), dailyCard(), openGames().length?null:gamesCard(), undressCard(), notes, jarBox,
     $("button",{class:"btn ghost",style:"align-self:center",onclick:()=>{ tab="memories"; render(); window.scrollTo(0,0); },text:`\u2661 Kept cards (${(S.memories.items||[]).length})`})
   ];
+}
+/* ---------- our jar ---------- */
+const JAR_CAP = 50;
+const JAR_MS = [[10,"Ten nights in. This is turning into a habit 😏"],[25,"25 nights. Look at y'all."],[50,"50 nights. That jar is full. Starting you a new one."],[75,"75 nights and still choosing each other."],[100,"100 nights. That's love, period."],[150,"150 nights. Y'all are not playing."],[200,"200 nights together."],[365,"365 nights. A whole year of us."]];
+const JAR_COLORS = ["#f4a6bf","#e0609a","#f9cdd8","#c8a96b","#ff8fb1","#d94f86"];
+function jarSVG(n, fresh){
+  const full = n>0 && n%JAR_CAP===0, inJar = n===0 ? 0 : (full ? JAR_CAP : n%JAR_CAP);
+  const hearts=[];
+  for(let i=0;i<inJar;i++){
+    const row=Math.floor(i/7), col=i%7, j=((i*53)%9)-4, jy=((i*31)%7)-3;
+    const x=46+col*18+(row%2?9:0)+j*0.6, y=204-row*15+jy*0.6, r=((i*37)%56)-28, c=JAR_COLORS[(i*7+row)%JAR_COLORS.length];
+    const isNew = i>=inJar-fresh;
+    hearts.push(`<g class="jh${isNew?" drop":""}" style="${isNew?`--d:${(i-(inJar-fresh))*0.18}s;`:""}--x:${x.toFixed(1)}px;--y:${y.toFixed(1)}px"><g transform="translate(${x.toFixed(1)},${y.toFixed(1)}) rotate(${r}) scale(.78)"><path d="M0,9 C-9,3 -11,-2 -11,-5 A5.5,5.5 0 0 1 0,-7 A5.5,5.5 0 0 1 11,-5 C11,-2 9,3 0,9Z" fill="${c}" stroke="#7a2e3a" stroke-opacity=".35" stroke-width="1"/><ellipse cx="-4.5" cy="-3.5" rx="2.2" ry="1.4" fill="#fff" opacity=".55"/></g></g>`);
+  }
+  const body="M58,66 Q50,74 42,86 Q30,102 30,124 L30,206 Q30,226 52,228 L148,228 Q170,226 170,206 L170,124 Q170,102 158,86 Q150,74 142,66 Z";
+  return `<svg viewBox="0 0 200 250" class="jar-svg" role="img" aria-label="A glass jar holding ${n} heart${n===1?"":"s"}">
+  <defs>
+    <clipPath id="jarIn"><path d="${body}" transform="translate(100,147) scale(.95) translate(-100,-147)"/></clipPath>
+    <linearGradient id="jarGlass" x1="0" x2="1"><stop offset="0" stop-color="#fff" stop-opacity=".16"/><stop offset=".35" stop-color="#fff" stop-opacity=".04"/><stop offset=".8" stop-color="#fff" stop-opacity=".02"/><stop offset="1" stop-color="#fff" stop-opacity=".12"/></linearGradient>
+    <linearGradient id="jarLid" x1="0" x2="0" y1="0" y2="1"><stop offset="0" stop-color="#e8cf96"/><stop offset=".5" stop-color="#c8a96b"/><stop offset="1" stop-color="#8a6c36"/></linearGradient>
+    <radialGradient id="jarGlow" cx=".5" cy=".7" r=".6"><stop offset="0" stop-color="#f4a6bf" stop-opacity="${Math.min(.5,.12+inJar/JAR_CAP*.4).toFixed(2)}"/><stop offset="1" stop-color="#f4a6bf" stop-opacity="0"/></radialGradient>
+  </defs>
+  <ellipse cx="100" cy="236" rx="78" ry="9" fill="#000" opacity=".35"/>
+  <ellipse cx="100" cy="150" rx="96" ry="96" fill="url(#jarGlow)"/>
+  <path d="${body}" fill="#0d1d16" opacity=".55"/>
+  <g clip-path="url(#jarIn)">${hearts.join("")}</g>
+  <path d="${body}" fill="url(#jarGlass)" stroke="#f9f3ee" stroke-opacity=".55" stroke-width="2.5"/>
+  <path d="M44,104 Q38,124 38,150 L38,196" fill="none" stroke="#fff" stroke-opacity=".45" stroke-width="5" stroke-linecap="round"/>
+  <path d="M50,92 Q47,96 45,100" fill="none" stroke="#fff" stroke-opacity=".35" stroke-width="3" stroke-linecap="round"/>
+  <path d="M160,140 L160,196" fill="none" stroke="#fff" stroke-opacity=".18" stroke-width="3" stroke-linecap="round"/>
+  <rect x="56" y="54" width="88" height="16" rx="4" fill="#ffffff14" stroke="#f9f3ee" stroke-opacity=".5" stroke-width="2"/>
+  <rect x="50" y="30" width="100" height="26" rx="6" fill="url(#jarLid)" stroke="#5b4320" stroke-width="2"/>
+  <g stroke="#5b4320" stroke-opacity=".45" stroke-width="1.4">${[0,1,2,3,4,5,6,7,8,9,10].map(i=>`<line x1="${58+i*8.4}" y1="34" x2="${58+i*8.4}" y2="52"/>`).join("")}</g>
+  <rect x="50" y="30" width="100" height="7" rx="4" fill="#fff" opacity=".25"/>
+  <path d="M54,62 Q100,70 146,62 L146,68 Q100,76 54,68 Z" fill="#e0609a"/>
+  <g transform="translate(140,66)"><path d="M0,0 C-6,-12 -22,-12 -18,-2 C-16,4 -6,3 0,0 Z" fill="#f4a6bf" stroke="#b23a6c" stroke-width="1.2"/><path d="M0,0 C6,-12 22,-12 18,-2 C16,4 6,3 0,0 Z" fill="#f4a6bf" stroke="#b23a6c" stroke-width="1.2"/><path d="M-2,1 L-10,22 L-4,19 L0,26 Z M2,1 L8,24 L3,20 L-1,27 Z" fill="#e0609a"/><circle r="3.6" fill="#e0609a"/></g>
+  <g transform="translate(100,108) rotate(-4)"><rect x="-30" y="-15" width="60" height="30" rx="6" fill="#fdf3f5" stroke="#c8a96b" stroke-width="1.5"/><text y="-1" text-anchor="middle" font-family="Gloock, Georgia, serif" font-size="14" fill="#163024">${n}</text><text y="10" text-anchor="middle" font-family="Inter, sans-serif" font-size="7" letter-spacing="1.2" fill="#5b7a6a">${n===1?"NIGHT":"NIGHTS"}</text></g>
+</svg>`;
+}
+function jarCard(){
+  const n=new Set(S.nights.dates||[]).size, seen=lsGet("ftl_jar_seen",null);
+  const fresh = seen===null ? 0 : Math.max(0, Math.min(6, n-seen));
+  if(seen===null || seen!==n) setTimeout(()=>lsSet("ftl_jar_seen", n), 0);
+  const jars=Math.floor((n-1)/JAR_CAP), next=JAR_MS.find(([m])=>m>n), prev=[...JAR_MS].reverse().find(([m])=>m<=n);
+  const base=prev?prev[0]:0, pct=next?Math.round(100*(n-base)/(next[0]-base)):100;
+  const wrap=$("div",{class:"jar-stage"});
+  wrap.innerHTML=jarSVG(n, fresh);
+  return $("div",{class:"form jarbox"},
+    $("div",{class:"row",style:"justify-content:space-between;align-items:center"},$("h3",{style:"font-size:20px",text:"Our jar"}), jars>0 ? $("span",{class:"hearts-pill",text:`${jars} full jar${jars>1?"s":""} 🫙`}) : null),
+    wrap,
+    $("p",{class:"muted",style:"margin:0;font-size:13px;text-align:center",text: n===0 ? "Every night you play drops a heart in here. Start one tonight." : fresh ? `${fresh===1?"A new heart just":fresh+" new hearts just"} dropped in 💕` : `${n} night${n===1?"":"s"} together and counting. Every night you play drops another one in.`}),
+    next ? $("div",{class:"jar-next"},$("div",{class:"row",style:"justify-content:space-between;font-size:13px"},$("span",{text:`Next: ${next[0]} nights`}),$("span",{class:"muted",text:`${next[0]-n} to go`})),$("span",{class:"np-track"},$("span",{class:"np-fill",style:`width:${Math.max(4,pct)}%`}))) : null);
+}
+function checkJarMilestone(){
+  if(typeof room!=="undefined" && room && typeof synced!=="undefined" && !synced) return;
+  const n=new Set(S.nights.dates||[]).size, last=lsGet("ftl_jar_ms",null);
+  if(last===null){ lsSet("ftl_jar_ms", n); return; }   /* first time on this device: don't replay old milestones */
+  const hit=JAR_MS.filter(([m])=>m>last && m<=n).pop();
+  if(hit){ lsSet("ftl_jar_ms", n); showMoment("🫙", "Our jar", `${hit[0]} nights together`, hit[1], 5000); }
+  else if(n>last) lsSet("ftl_jar_ms", n);
 }
 /* Swipe an open card left or right to pass on it. */
 function addSwipe(el){
@@ -2966,7 +3024,7 @@ function render(){
   const v = tab==="rewards"?viewRewards():tab==="setup"?viewSetup():tab==="games"?viewGames():tab==="avatars"?viewAvatars():tab==="home"?viewHome():tab==="play"?viewPlay():tab==="memories"?viewMemories():tab==="limits"?viewBoundaries():viewSettings();
   app.append(...v.flat().filter(Boolean)); renderTabs();
   if(tab==="play"){ const acts=[...app.querySelectorAll(":scope > .actions")]; if(acts.length){ const bar=$("div",{class:"playbar"}); acts.forEach(a=>bar.append(a)); app.append(bar); } app.append(gamesLink()); }
-  checkLevelUp(); checkAvatarNews(); checkDailyNews(); checkGameNews(); checkRewardNews();
+  checkLevelUp(); checkAvatarNews(); checkDailyNews(); checkGameNews(); checkRewardNews(); checkJarMilestone();
 }
 loadLocal(); render(); connect(); goFromHash();
 </script>
