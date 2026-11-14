@@ -122,6 +122,11 @@ a.btn{color:inherit;text-decoration:none;display:inline-flex;align-items:center;
 .ourlist-row{display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:14px;border:1px solid var(--line);background:#ffffff06}
 .ourlist-row .ol-t{flex:1;min-width:0}
 .ourlist-row.done{opacity:.8}
+.chap{display:flex;flex-direction:column;align-items:center;gap:10px;padding:8px 0}
+.chap-emoji{font-size:64px;line-height:1;text-align:center;filter:drop-shadow(0 8px 20px #f4a6bf40);animation:chapIn .5s cubic-bezier(.3,1.5,.5,1)}
+@keyframes chapIn{from{transform:scale(.5) rotate(-10deg);opacity:0}to{transform:none;opacity:1}}
+.reveal-card{border-color:var(--rose)}
+.reveal-card.locked{border-style:dashed}
 .alert-ask{display:flex;align-items:center;gap:8px;padding:10px 12px;border-radius:16px;border:1px dashed var(--rose);background:#f4a6bf0d}
 .al-row{display:flex;gap:10px;align-items:flex-start}
 .al-dot{width:10px;height:10px;border-radius:50%;margin-top:6px;flex:none;background:#ffffff33;box-shadow:0 0 0 3px #ffffff10}
@@ -1113,15 +1118,25 @@ function setAnswer(key, v){
   b[me]=Object.assign({},b[me]||{},{[key]:v}); S.boundaries=b; save("boundaries"); render();
 }
 const ANS = {yes:"Yes", maybe:"Maybe", no:"No", love:"Love it"};
+/* Answers stay private until you've BOTH finished. Then they're revealed to both of you at the same time. */
+function bDone(k){ return !!(((S.boundaries||{})[k]||{})._done); }
+function revealed(){ return bDone("a") && bDone("b"); }
+function lockIn(){ const b=JSON.parse(JSON.stringify(S.boundaries||{a:{},b:{},custom:[]})); b[me]=Object.assign({},b[me]||{},{_done:Date.now()}); S.boundaries=b; save("boundaries"); render(); }
+function checkBoundsReveal(){
+  if(!me || !revealed() || lsGet("ftl_reveal_shown",false) || wiz!==null) return;
+  if(typeof room!=="undefined" && room && typeof synced!=="undefined" && !synced) return;
+  lsSet("ftl_reveal_shown",true);
+  showMoment("👀","The reveal","You both finished",`Go to Boundaries to see where you and ${nm(other(me))} line up.`,4500);
+}
 function answerRow(key, label, sub, opts){
   opts = opts || [["yes","Yes"],["maybe","Maybe"],["no","No"]];
-  const cur=answer(me,key), theirs=answer(other(me),key);
-  const dotTitle = nm(other(me))+": "+(theirs ? ANS[theirs] : "not answered yet");
+  const cur=answer(me,key), show=revealed(), theirs=show?answer(other(me),key):"";
+  const dotTitle = nm(other(me))+": "+(theirs ? ANS[theirs] : "not answered");
   const seg=$("div",{class:"seg tight",role:"group","aria-label":label}, opts.map(([v,t])=>$("button",{class:"seg-"+(v==="love"?"yes":v),"aria-pressed":String(cur===v),onclick:()=>setAnswer(key,v),text:t})));
   return $("div",{class:"brow"},
     $("div",{class:"bname"},
-      $("div",{class:"bline1"},$("span",{class:"pdot "+(theirs?"pd-"+(theirs==="love"?"yes":theirs):"pd-none"),title:dotTitle,"aria-label":dotTitle,role:"img"}),$("span",{style:"font-weight:500",text:label})),
-      sub?$("div",{class:"muted",style:"font-size:13px;margin-left:18px",text:sub}):null),
+      $("div",{class:"bline1"},show?$("span",{class:"pdot "+(theirs?"pd-"+(theirs==="love"?"yes":theirs):"pd-none"),title:dotTitle,"aria-label":dotTitle,role:"img"}):null,$("span",{style:"font-weight:500",text:label})),
+      sub?$("div",{class:"muted",style:"font-size:13px;margin-left:"+(show?"18px":"0"),text:sub}):null),
     seg);
 }
 function allItems(){
@@ -1155,20 +1170,29 @@ function allItems(){
   const both=items.filter(([k])=>["yes","love"].includes(A(k)) && ["yes","love"].includes(T(k)));
   const talk=items.filter(([k])=>A(k)!=="no" && T(k)!=="no" && (A(k)==="maybe"||T(k)==="maybe"));
   const off=items.filter(([k])=>A(k)==="no"||T(k)==="no");
-  const mine=items.filter(([k])=>A(k)).length, theirs=items.filter(([k])=>T(k)).length;
+  const mine=items.filter(([k])=>A(k)).length;
   const chipList=(list,cls,empty)=>list.length?$("div",{class:"chips"},list.map(([k,n])=>$("span",{class:"chip "+cls,text:n}))):$("span",{class:"muted",style:"font-size:13px",text:empty});
-  out.push($("div",{class:"form"},
+  if(revealed()){
+  out.push($("div",{class:"form reveal-card"},
+    $("div",{class:"eyebrow",text:"👀 The reveal"}),
     $("h3",{style:"font-size:20px",text:"Where you two line up"}),
-    $("div",{class:"muted",style:"font-size:13px",text:`You've answered ${mine} of ${items.length}. ${nm(other(me))} has answered ${theirs}.`}),
-    $("div",{class:"sumgrp"},$("b",{text:"You're both into"}),chipList(both,"c-yes","Nothing yet. Answer below and matches show up here.")),
+    $("div",{class:"sumgrp"},$("b",{text:"You're both into"}),chipList(both,"c-yes","Nothing in common yet.")),
     talk.length ? $("div",{class:"sumgrp"},$("b",{text:"Talk about it first"}),chipList(talk,"c-maybe","")) : null,
     off.length ? $("div",{class:"sumgrp"},$("b",{text:"Off limits for one of you"}),chipList(off,"c-no","")) : null));
-  out.push($("h3",{style:"font-size:20px;margin:6px 2px 0",text:"Your answers"}),$("p",{class:"muted",style:"margin:-4px 2px 0;font-size:13px",text:"Tap a section to open it."}));
   out.push($("div",{class:"legend2"},
     $("span",{},$("span",{class:"pdot pd-yes"})," "+nm(other(me))+" said Yes"),
     $("span",{},$("span",{class:"pdot pd-maybe"})," Maybe"),
     $("span",{},$("span",{class:"pdot pd-no"})," No"),
-    $("span",{},$("span",{class:"pdot pd-none"})," Not yet")));
+    $("span",{},$("span",{class:"pdot pd-none"})," Skipped")));
+  } else {
+  out.push($("div",{class:"form reveal-card locked"},
+    $("div",{class:"eyebrow",text:"🔒 The reveal"}),
+    $("h3",{style:"font-size:20px",text:"Private until you both finish"}),
+    $("p",{class:"muted",style:"margin:0;font-size:14px",text:`Nobody sees anything until you've both finished. Then you'll see where you line up, at the same time.`}),
+    bDone(me) ? $("p",{style:"margin:0;font-size:14px;color:var(--d-date)",text:"✔️ You're locked in. You can still change answers below."})
+      : $("div",{class:"row",style:"justify-content:space-between;align-items:center;gap:10px"},$("span",{class:"muted",style:"font-size:13px",text:`You've answered ${mine} of ${items.length}.`}), mine>0 ? $("button",{class:"btn small primary",onclick:lockIn,text:"I'm done, lock it in"}) : null)));
+  }
+  out.push($("h3",{style:"font-size:20px;margin:6px 2px 0",text:"Your answers"}),$("p",{class:"muted",style:"margin:-4px 2px 0;font-size:13px",text:"Tap a section to open it."}));
   for(const g of TOPIC_GROUPS){
     const rows=[]; const keys=[];
     if(g.items) for(const [k,name,sub] of g.items){ rows.push(answerRow(k,name,sub)); keys.push(k); }
@@ -1910,6 +1934,7 @@ function viewHome(){
   rows.sort((a,b)=>(b.hot?1:0)-(a.hot?1:0));
   const extras=[];
   { const owe=owedBy(me||"a"); if(owe.length) extras.push({t:`You owe ${partner}: ${owe[0].text}${owe.length>1?` (+${owe.length-1} more)`:""}`, go:()=>{ tab="rewards"; render(); window.scrollTo(0,0); }}); }
+  if(me && revealed() && !lsGet("ftl_reveal_opened",false)) extras.push({t:`👀 The boundaries reveal is open`, go:()=>{ lsSet("ftl_reveal_opened",true); tab="limits"; render(); window.scrollTo(0,0); }});
   if(me && pushHereOn() && !pushOn(other(me)) && !lsGet("ftl_alert_nudged",false)) extras.push({t:`${partner}'s alerts are off. Text ${himHer(other(me))} to turn them on`, go:()=>{ lsSet("ftl_alert_nudged",true); location.href=alertNudgeLink(); render(); }});
   { const dq=dailyQ(ymd(new Date())); if(dq && me && !dailyAns(ymd(new Date()),me)) extras.push({t: dailyAns(ymd(new Date()),other(me)) ? `${partner} answered today's question` : "Today's question is waiting", go:()=>{ const el=document.querySelector(".daily"); if(el) el.scrollIntoView({behavior:"smooth",block:"center"}); }}); }
   const gameRow=p=>$("div",{class:"gip"+(p.hot?" hot":"")},
@@ -2236,14 +2261,14 @@ const WIZ = {
     tip:"Go slow, use lots of lube, and stop if it hurts. Always wash up before going from the butt to anywhere else."}
 };
 const WIZ_GROUP = {
-  "Talk":"This part is about words: how you talk to each other and what you share.",
-  "Power":"Who leads and who follows. All of it is play you're both in on.",
-  "Rough play":"From a little rough to something that stings. You can say Yes to some and No to others.",
-  "Toys and touch":"Toys and touching yourself while you're on the phone.",
-  "Giving and getting":"Some things you might love to give but not get, or the other way around. So these are asked both ways.",
-  "Body":"Last part. Where do you love attention, and where should they leave alone?"
+  "Talk":{e:"🗣️", t:"Say it out loud", d:"Dirty talk, fantasies, what you call each other, and the pics and voice notes you send."},
+  "Power":{e:"👑", t:"Who's in charge", d:"Taking control, following orders, brat vs. tamer, begging, and being made to wait."},
+  "Rough play":{e:"🖐️", t:"A little rough", d:"Spanking, hair pulling, being held down. Yes to some, no to others. Totally fine."},
+  "Toys and touch":{e:"🎛️", t:"Toys and playing solo", d:"Toys, plugs, the remote in their hands, and touching yourself while they listen."},
+  "Giving and getting":{e:"🔄", t:"Giving and getting", d:"Oral and more. Asked both ways, because loving to give doesn't mean loving to get."},
+  "Body":{e:"🗺️", t:"Your body map", d:"Tap where you love attention, and where they should leave alone."}
 };
-const WIZ_ANS = [["yes","Yes, I'm into it"],["maybe","Maybe, let's talk first"],["no","No, not for me"]];
+const WIZ_ANS = [["yes","🔥 Yes, I'm into it"],["maybe","🤔 Maybe, let's talk first"],["no","🚫 Not for me"]];
 let wiz = null;
 function wfill(t){ return t.replace(/\{brat\}/g,nm(bratKey())).replace(/\{tamer\}/g,nm(other(bratKey()))).replace(/\{you\}/g,nm(other(me))); }
 function wizSteps(){
@@ -2269,7 +2294,7 @@ function wizStart(){
   else { const fo=st.findIndex(x=>["item","pair","body"].includes(x.t) && !stepDone(x)); wiz = (fo<=2) ? 0 : fo; }
   render(); window.scrollTo(0,0);
 }
-function wizGo(i){ const n=wizSteps().length; wiz=Math.max(0,Math.min(n-1,i)); lsSet("ftl_wiz",wiz); render(); window.scrollTo(0,0); }
+function wizGo(i){ const n=wizSteps().length; wiz=Math.max(0,Math.min(n-1,i)); lsSet("ftl_wiz",wiz); if(wiz===n-1 && !bDone(me)){ lockIn(); return window.scrollTo(0,0); } render(); window.scrollTo(0,0); }
 function wizExit(){ wiz=null; lsSet("ftl_wiz",null); render(); window.scrollTo(0,0); }
 function wizAnswer(k,v){
   const b=JSON.parse(JSON.stringify(S.boundaries||{a:{},b:{},custom:[]}));
@@ -2295,32 +2320,39 @@ function viewWizard(){
         $("div",{},$("b",{text:"Yes"})," means you're into it, and those cards can come up."),
         $("div",{},$("b",{text:"Maybe"})," means you're curious but want to talk first. Those cards come with a check-in."),
         $("div",{},$("b",{text:"No"})," means it never comes up. No explaining needed.")),
-      $("p",{class:"wp muted",text:`${nm(other(me))} will see your answers and you'll see theirs, so you can talk about it. You can change anything later, even in the middle of a game. It takes about five minutes.`}),
+      $("p",{class:"wp muted",text:`Your answers stay private. Nobody sees anything until you've both finished, then it's revealed to both of you at the same time. You can change anything later. About five minutes.`}),
       $("button",{class:"btn primary wbig",onclick:()=>wizGo(1),text:"Let's start"}));
   } else if(s.t==="group"){
-    card.push($("div",{class:"eyebrow",text:"Next up"}),$("h2",{class:"wq",text:s.g.title}),$("p",{class:"wp",text:WIZ_GROUP[s.g.title]||""}),nav("Got it"));
+    const G=WIZ_GROUP[s.g.title]||{e:"✨",t:s.g.title,d:""}, gi=TOPIC_GROUPS.indexOf(s.g), names=(s.g.items||[]).map(x=>x[1]).concat((s.g.pairs||[]).map(x=>x[1])), cnt=(s.g.items||[]).length+(s.g.pairs||[]).length+(s.g.parts?1:0);
+    card.push($("div",{class:"chap"},
+      $("div",{class:"eyebrow",text:`Part ${gi+1} of ${TOPIC_GROUPS.length}`}),
+      $("div",{class:"chap-emoji",text:G.e}),
+      $("h2",{class:"wq",style:"text-align:center",text:G.t}),
+      $("p",{class:"wp",style:"text-align:center",text:G.d}),
+      names.length ? $("div",{class:"chips",style:"justify-content:center"},...names.map(n=>$("span",{class:"chip",text:n}))) : null,
+      $("div",{class:"muted",style:"font-size:13px;text-align:center",text: s.g.parts ? `${s.g.parts.length} spots, one tap each` : `${cnt} quick question${cnt===1?"":"s"}`})),
+      $("div",{class:"wnav"}, wiz>0 ? $("button",{class:"btn ghost",onclick:()=>wizGo(wiz-1),text:"Back"}) : $("span",{}), $("button",{class:"btn primary",onclick:()=>wizGo(wiz+1),text:"Let's go"})));
   } else if(s.t==="item"){
     const w=WIZ[s.k]||{q:s.name+"?",what:""}, cur=answer(me,s.k);
-    card.push($("div",{class:"eyebrow",text:s.g+" · "+s.name}),$("h2",{class:"wq",text:wfill(w.q)}),
+    card.push($("div",{class:"eyebrow",text:`${(WIZ_GROUP[s.g]||{}).e||""} ${s.name}`}),$("h2",{class:"wq",text:wfill(w.q)}),
       w.what?$("p",{class:"wp",text:wfill(w.what)}):null,
       w.game?$("div",{class:"wgame"},$("span",{class:"eyebrow",text:"A card it could unlock"}),$("span",{text:wfill(w.game)})):null,
       w.tip?$("div",{class:"wtip"},$("b",{text:"Good to know: "}),wfill(w.tip)):null,
       $("div",{class:"wans"},WIZ_ANS.map(([v,l])=>$("button",{class:"wbtn wb-"+v,"aria-pressed":String(cur===v),onclick:()=>wizAnswer(s.k,v),text:l}))),
-      $("p",{class:"muted",style:"margin:0;font-size:13px;text-align:center",text:theirSays(s.k)}),
       $("div",{class:"wnav"},wiz>0?$("button",{class:"btn ghost",onclick:()=>wizGo(wiz-1),text:"Back"}):$("span",{}),$("button",{class:"btn ghost",onclick:()=>wizGo(wiz+1),text:cur?"Next":"Skip for now"})));
   } else if(s.t==="pair"){
     const w=WIZ[s.k]||{q:s.name+"?",what:""};
     const row=(side,label)=>{ const key=s.k+":"+side, cur=answer(me,key);
       return $("div",{class:"wpair"},$("b",{text:label}),
         $("div",{class:"wans row3"},WIZ_ANS.map(([v,l])=>$("button",{class:"wbtn small wb-"+v,"aria-pressed":String(cur===v),onclick:()=>{ const b=JSON.parse(JSON.stringify(S.boundaries||{a:{},b:{}})); b[me]=Object.assign({},b[me]||{},{[key]:v}); S.boundaries=b; save("boundaries"); render(); },text:l.split(",")[0]}))),
-        $("span",{class:"muted",style:"font-size:13px",text:theirSays(key)})); };
-    card.push($("div",{class:"eyebrow",text:s.g+" · "+s.name}),$("h2",{class:"wq",text:w.q}),
+        null); };
+    card.push($("div",{class:"eyebrow",text:`${(WIZ_GROUP[s.g]||{}).e||""} ${s.name}`}),$("h2",{class:"wq",text:w.q}),
       w.what?$("p",{class:"wp",text:w.what}):null,
       w.tip?$("div",{class:"wtip"},$("b",{text:"Good to know: "}),w.tip):null,
       row("give","Giving it"),row("get","Getting it"),nav(stepDone(s)?"Next":"Skip for now"));
   } else if(s.t==="body"){
-    card.push($("div",{class:"eyebrow",text:"Body"}),$("h2",{class:"wq",text:"Where do you love attention?"}),
-      $("p",{class:"wp",text:"Go spot by spot. Love it means pay attention there. Maybe means it depends on the mood. No means leave it alone. The dot shows what "+nm(other(me))+" said."}),
+    card.push($("div",{class:"eyebrow",text:"🗺️ Body"}),$("h2",{class:"wq",text:"Where do you love attention?"}),
+      $("p",{class:"wp",text:"Go spot by spot. Love it means pay attention there. Maybe means it depends on the mood. No means leave it alone."}),
       ...s.g.parts.map(p=>answerRow("body:"+p,p,"",[["love","Love it"],["maybe","Maybe"],["no","No"]])),
       nav());
   } else if(s.t==="custom"){
@@ -2334,11 +2366,13 @@ function viewWizard(){
       nav("Finish"));
   } else {
     const items=allItems(), mine=items.filter(([k])=>answer(me,k)).length;
-    card.push($("h2",{class:"wq",text:"You're all set"}),
-      $("p",{class:"wp",text:`You answered ${mine} of ${items.length}. Anything you skipped counts as open, and you can come back to it anytime.`}),
-      $("p",{class:"wp",text:`Next, check "Where you two line up" to see what you're both into and what to talk about with ${nm(other(me))}.`}),
-      $("button",{class:"btn primary wbig",onclick:wizExit,text:"See where we line up"}),
-      $("button",{class:"btn ghost",style:"align-self:center",onclick:()=>wizGo(1),text:"Go through it again"}));
+    if(revealed()) card.push($("div",{class:"chap-emoji",text:"👀"}),$("h2",{class:"wq",style:"text-align:center",text:"You both finished"}),
+      $("p",{class:"wp",style:"text-align:center",text:`The reveal is open. See what you and ${nm(other(me))} are both into, and what to talk about first.`}),
+      $("button",{class:"btn primary wbig",onclick:()=>{ lsSet("ftl_reveal_shown",true); wizExit(); },text:"Show me the reveal"}));
+    else card.push($("div",{class:"chap-emoji",text:"🔒"}),$("h2",{class:"wq",style:"text-align:center",text:"Locked in"}),
+      $("p",{class:"wp",style:"text-align:center",text:`You answered ${mine} of ${items.length}. Your answers stay private until you've both finished, then the reveal opens for both of you at the same time.`}),
+      $("button",{class:"btn primary wbig",onclick:wizExit,text:"Done"}));
+    card.push($("button",{class:"btn ghost",style:"align-self:center",onclick:()=>wizGo(1),text:"Go through it again"}));
   }
   return [header(), top, $("div",{class:"form wcard"},...card.filter(Boolean))];
 }
@@ -3070,7 +3104,7 @@ function render(){
   const v = tab==="rewards"?viewRewards():tab==="setup"?viewSetup():tab==="games"?viewGames():tab==="avatars"?viewAvatars():tab==="home"?viewHome():tab==="play"?viewPlay():tab==="memories"?viewMemories():tab==="limits"?viewBoundaries():viewSettings();
   app.append(...v.flat().filter(Boolean)); renderTabs();
   if(tab==="play"){ const acts=[...app.querySelectorAll(":scope > .actions")]; if(acts.length){ const bar=$("div",{class:"playbar"}); acts.forEach(a=>bar.append(a)); app.append(bar); } app.append(gamesLink()); }
-  checkLevelUp(); checkAvatarNews(); checkDailyNews(); checkGameNews(); checkRewardNews(); checkJarMilestone();
+  checkLevelUp(); checkBoundsReveal(); checkAvatarNews(); checkDailyNews(); checkGameNews(); checkRewardNews(); checkJarMilestone();
 }
 loadLocal(); render(); connect(); goFromHash();
 </script>
