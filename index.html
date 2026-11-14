@@ -794,6 +794,24 @@ function goTo(tag){
 }
 function goFromHash(){ const m=(location.hash||"").match(/go=([a-z]+)/); if(m){ try{ history.replaceState(null,"",location.pathname+location.search); }catch(e){} setTimeout(()=>goTo(m[1]),50); } }
 try{ navigator.serviceWorker && navigator.serviceWorker.addEventListener("message", e=>{ if(e.data && e.data.go) goTo(e.data.go); }); }catch(e){}
+/* ---------- secret code: open the game on any device by typing a code instead of the private link ---------- */
+async function setRoomCode(code){ try{ await rpc("ftl_set_code",{p_room:room.id,p_secret:room.secret,p_code:code}); return true; }catch(e){ toast(/taken/.test(e.message)?"Pick a different code.":/short/.test(e.message)?"Make it at least 6 characters.":"Couldn’t save the code. Check your connection."); return false; } }
+let codeOpen=false;
+function codeCard(){
+  const cs=S.settings.codeSet, P=nm(other(me||"a"));
+  const inp=$("input",{id:"codeIn",type:"password",autocomplete:"new-password",maxlength:"60",placeholder:"Something only you two would know"});
+  const show=$("button",{type:"button",class:"btn small ghost",onclick:()=>{ inp.type=inp.type==="password"?"text":"password"; show.textContent=inp.type==="password"?"Show":"Hide"; },text:"Show"});
+  return $("div",{class:"form"},
+    $("h3",{style:"font-size:20px",text:"Secret code"}),
+    $("p",{class:"muted",style:"margin:0;font-size:13px",text: cs ? `Set by ${cs.by===me?"you":P} on ${new Date(cs.at).toLocaleDateString(undefined,{month:"short",day:"numeric"})}. On a new phone or iPad, open the game and type the code. No link needed.` : "Open the game on any phone or iPad by typing a code instead of using the link. Pick something only you two would know."}),
+    (!cs || codeOpen) ? $("form",{class:"stack",style:"gap:8px",onsubmit:async e=>{ e.preventDefault(); const v=inp.value.trim(); if(v.replace(/\s/g,"").length<6){ toast("Make it at least 6 characters."); return; }
+        if(await setRoomCode(v)){ S.settings=Object.assign({},S.settings,{codeSet:{at:Date.now(),by:me}}); save("settings"); codeOpen=false; toast(`Code saved. Tell ${P} in person or on the phone 🤫`); render(); } }},
+      $("label",{for:"codeIn",class:"muted",style:"font-size:13px",text:"At least 6 characters. Capitals and extra spaces don't matter."}),
+      $("div",{class:"row",style:"gap:6px;flex-wrap:nowrap"},$("div",{style:"flex:1;min-width:0"},inp),show),
+      $("div",{class:"row",style:"gap:8px"},$("button",{class:"btn primary",type:"submit",text:cs?"Save new code":"Save code"}), cs ? $("button",{type:"button",class:"btn small ghost",onclick:()=>{ codeOpen=false; render(); },text:"Cancel"}) : null))
+    : $("button",{class:"btn small",style:"align-self:flex-start",onclick:()=>{ codeOpen=true; render(); },text:"Change the code"}),
+    $("p",{class:"muted",style:"margin:0;font-size:13px",text:"Nobody can read the code back, not even the database: it's scrambled before it's stored. Don't text it; say it."}));
+}
 function alertNudgeLink(){ const o=other(me||"a"); return nudgeLink(`Turn on alerts in our game so you know when it's your turn 🔔 Settings → Alerts → Turn on.`); }
 function alertsCard(compact){
   const here=pushHereOn(), o=other(me||"a"), P=nm(o), theirs=pushOn(o);
@@ -2114,6 +2132,7 @@ function viewSettings(){
       $("div",{class:"srow"},$("div",{style:"min-width:0"},$("div",{style:"font-weight:500",text:"This phone belongs to"}),$("div",{class:"muted",style:"font-size:13px",text:"So the game knows whose cards to deal here."})),
         $("div",{class:"seg tight",role:"group","aria-label":"This phone belongs to"},["a","b"].map(k=>$("button",{class:"seg-yes","aria-pressed":String(me===k),onclick:()=>{me=k;lsSet("ah_me",k);render();},text:nm(k)}))))),
     alertsCard(),
+    codeCard(),
     fold("pace","Game pace","How many Pillow Talk cards each level lasts",paceBox()),
     fold("cats","Card categories",`${Object.keys(DECKS).filter(k=>k!=="jyesno" && !(st.paused||[]).includes(k)).length} of ${Object.keys(DECKS).length-1} on`,$("div",{class:"form"},
       $("h3",{style:"font-size:20px",text:"Card categories"}),
@@ -3018,14 +3037,25 @@ function viewOnboard(){
 }
 
 function viewLocked(){
+  const codeIn=$("input",{id:"codeIn",type:"password",autocomplete:"current-password",maxlength:"60",placeholder:"Your secret code"});
+  const show=$("button",{type:"button",class:"btn small ghost",onclick:()=>{ codeIn.type=codeIn.type==="password"?"text":"password"; show.textContent=codeIn.type==="password"?"Show":"Hide"; },text:"Show"});
+  const go=$("button",{class:"btn primary",type:"submit",text:"Open our game"});
   return [$("div",{class:"form",style:"margin-top:40px;text-align:center;align-items:center"},
     $("div",{class:"logo",style:"width:96px;height:96px"}),
     $("h2",{style:"font-size:26px",text:"For the Lovers"}),
-    $("p",{class:"muted",style:"margin:0",text:"This game only opens from your private link. Open the link you were sent, and it will remember this device after that."}),
-    $("form",{class:"stack",style:"width:100%;gap:8px",onsubmit:e=>{ e.preventDefault(); const v=(document.getElementById("linkIn").value||"").trim(), m=v.match(/r=([0-9a-f-]{36})\.([A-Za-z0-9_-]{8,})/); if(!m){ toast("That doesn’t look like your private link."); return; } location.hash="r="+m[1]+"."+m[2]; location.reload(); }},
-      $("label",{for:"linkIn",class:"muted",style:"font-size:13px",text:"Opened from your Home Screen? Paste your private link here once."}),
-      $("input",{id:"linkIn",placeholder:"Paste the link",autocomplete:"off"}),
-      $("button",{class:"btn primary",type:"submit",text:"Open our game"})))];
+    $("p",{class:"muted",style:"margin:0",text:"Type your secret code to come in. This device remembers it after that."}),
+    $("form",{class:"stack",style:"width:100%;gap:8px;text-align:left",onsubmit:async e=>{ e.preventDefault(); const v=codeIn.value.trim(); if(!v) return;
+        go.disabled=true; go.textContent="Checking…";
+        try{ const id=await rpc("ftl_join",{p_code:v}); if(id){ room={id, secret:v}; lsSet("ftl_room", room); location.reload(); return; } toast("That's not it. Try again."); }
+        catch(err){ toast(/too many/.test(err.message)?"Too many tries. Wait a few minutes.":"Couldn't check the code. Check your connection."); }
+        go.disabled=false; go.textContent="Open our game"; }},
+      $("label",{for:"codeIn",class:"muted",style:"font-size:13px",text:"Secret code"}),
+      $("div",{class:"row",style:"gap:6px;flex-wrap:nowrap"},$("div",{style:"flex:1;min-width:0"},codeIn),show),
+      go),
+    $("details",{class:"g-details",style:"width:100%;text-align:left"},$("summary",{text:"Have your private link instead?"}),
+      $("form",{class:"stack",style:"gap:8px;margin-top:6px",onsubmit:e=>{ e.preventDefault(); const v=(document.getElementById("linkIn").value||"").trim(), m=v.match(/r=([0-9a-f-]{36})\.([A-Za-z0-9_-]{8,})/); if(!m){ toast("That doesn't look like your private link."); return; } location.hash="r="+m[1]+"."+m[2]; location.reload(); }},
+        $("input",{id:"linkIn",placeholder:"Paste the link",autocomplete:"off"}),
+        $("button",{class:"btn",type:"submit",text:"Open with the link"}))))];
 }
 function render(){
   const app=document.getElementById("app"); app.innerHTML="";
