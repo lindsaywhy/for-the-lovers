@@ -1016,7 +1016,7 @@ const EARN = {
   wyr:"+1 \u2665 for every pick. +1 more when you both pick the same.",
   td:"+2 \u2665 for answering a truth or doing a dare. +1 \u2665 when they answer yours.",
   dice:"+1 \u2665 for every roll you send. +1 \u2665 when they react.",
-  ttl:"+2 \u2665 for catching the lie. +2 \u2665 when you fool them."
+  ttl:"+2 \u2665 for catching the cap. +2 \u2665 when your cap gets past them."
 };
 function earnLine(id){ return $("div",{class:"earn",text:EARN[id]}); }
 
@@ -1063,7 +1063,7 @@ function viewWYR(){
   L.forEach(q=>{ if(wyrAns(q,me)&&wyrAns(q,other(me))) wyrPay(q); });
   const out=[$("p",{class:"muted",style:"margin:0;font-size:13px",text:`Pick one. ${partner} can't see your pick until ${heShe(other(me))} picks too.`})];
   if(next) out.push($("div",{class:"form wyr"},
-    $("div",{class:"eyebrow",text:"Would you rather"}),
+    $("div",{class:"eyebrow",text:"This or that"}),
     $("button",{class:"wyr-opt",onclick:()=>wyrPick(next,0),text:fill(next.a,me)}),
     $("div",{class:"wyr-or",text:"or"}),
     $("button",{class:"wyr-opt",onclick:()=>wyrPick(next,1),text:fill(next.b,me)}),
@@ -1133,23 +1133,23 @@ const ttlGuess = id => gGet(`ttlg|${id}`);
 function viewTTL(){
   ttlAll().forEach(t=>{ const g=ttlGuess(t.id); if(t.by===me && g && g.g!==t.lie) payOnce(`ttlfool|${t.id}`,2,"you fooled them"); });
   const partner=nm(other(me)), all=ttlAll(), toGuess=all.filter(t=>t.by!==me&&!ttlGuess(t.id)), out=[];
-  out.push($("p",{class:"muted",style:"margin:0;font-size:13px",text:`Write two true things and one lie. ${partner} guesses the lie. Works over text or on a call.`}));
+  out.push($("p",{class:"muted",style:"margin:0;font-size:13px",text:`Two facts and one cap. ${partner} has to call the cap. Works over text or on a call.`}));
   toGuess.forEach(t=>{
-    out.push($("div",{class:"form"},$("div",{class:"eyebrow",text:`From ${partner}: which one's the lie?`}),
+    out.push($("div",{class:"form"},$("div",{class:"eyebrow",text:`From ${partner}: which one's cap?`}),
       ...t.items.map((s,i)=>$("button",{class:"wyr-opt",style:"text-align:left",onclick:()=>{ gSet(`ttlg|${t.id}`,{g:i,at:Date.now()}); if(i===t.lie){ award(me,2,"you caught it"); } else toast(`Nope. ${partner} got you 😂`); render(); },text:s}))));
   });
   const ins=[0,1,2].map(i=>$("input",{id:"ttl"+i,maxlength:"140",placeholder:i===0?"Something true, or not…":"Another one"}));
   let lie=null;
   const pick=$("div",{class:"seg tight"},...[0,1,2].map(i=>$("button",{type:"button","aria-pressed":"false",onclick:e=>{ lie=i; pick.querySelectorAll("button").forEach((b,j)=>b.setAttribute("aria-pressed",String(j===i))); },text:`#${i+1}`})));
-  out.push($("form",{class:"form",onsubmit:e=>{ e.preventDefault(); const items=ins.map(x=>x.value.trim()); if(items.some(s=>!s)){ toast("Fill in all three."); return; } if(lie===null){ toast("Pick which one is the lie."); return; }
-      gSet(`ttl|${gId()}`, {by:me, items, lie, at:Date.now()}); lastSent={game:"ttl",at:Date.now(),msg:"I left you a two truths and a lie. Catch the lie"}; render(); }},
+  out.push($("form",{class:"form",onsubmit:e=>{ e.preventDefault(); const items=ins.map(x=>x.value.trim()); if(items.some(s=>!s)){ toast("Fill in all three."); return; } if(lie===null){ toast("Pick which one is cap."); return; }
+      gSet(`ttl|${gId()}`, {by:me, items, lie, at:Date.now()}); lastSent={game:"ttl",at:Date.now(),msg:"I left you a Cap or Facts. Find the cap"}; render(); }},
     $("h3",{style:"font-size:18px",text:"Make one"}), gMode("ttl","anything")!=="anything" ? $("p",{class:"muted",style:"margin:0;font-size:13px",text:`Theme: ${({me:"about you",us:"about the two of you",spicy:"spicy"})[gMode("ttl","anything")]}`}) : null, ...ins.map((x,i)=>$("div",{class:"field"},$("label",{for:"ttl"+i,text:`#${i+1}`}),x)),
-    $("div",{class:"field"},$("label",{text:"Which one's the lie?"}),pick),
+    $("div",{class:"field"},$("label",{text:"Which one's cap?"}),pick),
     $("button",{class:"btn primary",type:"submit",style:"align-self:flex-start",text:`Send to ${partner}`})));
   const past=all.filter(t=>t.by===me||ttlGuess(t.id)).slice(0,12);
   if(past.length) out.push($("h3",{style:"font-size:18px;margin-top:8px",text:"Past rounds"}), ...past.map(t=>{ const g=ttlGuess(t.id), mineT=t.by===me;
     return $("div",{class:"g-row"},$("div",{class:"g-q",text: mineT ? "Yours" : `${partner}'s`}),
-      ...t.items.map((s,i)=>$("div",{class:"g-line",text:`${i===t.lie?"❌ lie":"✔️ true"} · ${s}`})),
+      ...t.items.map((s,i)=>$("div",{class:"g-line",text:`${i===t.lie?"🧢 cap":"✔️ facts"} · ${s}`})),
       $("div",{class:"g-tag",text: !g ? `${partner} hasn't guessed yet` : g.g===t.lie ? (mineT?`${partner} caught it`:"You caught it") : (mineT?`You fooled ${partner} 😈`:`${partner} fooled you`)})); }));
   return out;
 }
@@ -1243,11 +1243,11 @@ function gWaiting(){
   w.total=w.wyr+w.ttl+w.dice+w.td; return w;
 }
 const GAMES = [
-  {id:"match",name:"Mutual match",emoji:"💞",sub:"See what you both want",view:viewMatch},
-  {id:"wyr",name:"Would you rather",emoji:"🤔",sub:"Pick one, then see theirs",view:viewWYR},
-  {id:"td",name:"Truth or dare",emoji:"😈",sub:"Send one, they answer later",view:viewTD},
-  {id:"dice",name:"Dice",emoji:"🎲",sub:"Roll and tell them how",view:viewDice},
-  {id:"ttl",name:"Two truths & a lie",emoji:"🤥",sub:"Catch the lie",view:viewTTL}
+  {id:"match",name:"Same Page",emoji:"💞",sub:"Swipe yes or no. Only the yeses you share show up",view:viewMatch},
+  {id:"wyr",name:"This or That",emoji:"🤔",sub:"Pick one, then see where they landed",view:viewWYR},
+  {id:"td",name:"Run It",emoji:"😈",sub:"Send a truth or a dare. No backing out",view:viewTD},
+  {id:"dice",name:"Dice",emoji:"🎲",sub:"Roll it, then tell them how you'd do it",view:viewDice},
+  {id:"ttl",name:"Cap or Facts",emoji:"🤥",sub:"Two facts, one cap. Catch the cap",view:viewTTL}
 ];
 function viewGames(){
   const out=[header()], w=gWaiting();
@@ -1269,14 +1269,14 @@ function gamesCard(){
   return $("button",{class:"form games-card",onclick:()=>{ tab="games"; gameTab=null; render(); window.scrollTo(0,0); }},
     $("div",{class:"row",style:"justify-content:space-between;align-items:center;width:100%"},$("h3",{style:"font-size:20px;margin:0",text:"Games"}),
       w.total ? $("span",{class:"hearts-pill",text:`${w.total} waiting on you`}) : null),
-    $("span",{class:"muted",style:"font-size:13px;text-align:left",text: w.total ? `${partner} made a move. Your turn 😏` : "Mutual match, would you rather, truth or dare, dice, two truths & a lie"}));
+    $("span",{class:"muted",style:"font-size:13px;text-align:left",text: w.total ? `${partner} made a move. Your turn 😏` : "Same Page, This or That, Run It, Dice, Cap or Facts"}));
 }
 /* ---- "what are we playing?" popup: keep going, restart the selected game, or change games ---- */
-const PICKS = [{id:"cards",name:"Card night",emoji:"🃏",sub:"Read cards to each other on the phone"}].concat(GAMES);
+const PICKS = [{id:"cards",name:"Pillow Talk",emoji:"🃏",sub:"Cards you read to each other on the phone"}].concat(GAMES);
 const selGame = () => lsGet("ftl_game","cards");
 function openGame(id){ lsSet("ftl_game", id); closeChooser(); if(id==="cards"){ if(!me){ askWho(); return; } logNight(); tab="play"; } else { tab="games"; gameTab=id; } render(); window.scrollTo(0,0); }
 function restartGame(id){
-  if(id==="cards"){ const t=ymd(new Date()); S.live=Object.assign({}, S.live, {card:null, by:null, n:0, night:t, history:[], reveal:null, cool:"", ys:0}); save("live"); toast("Card night starts over"); }
+  if(id==="cards"){ const t=ymd(new Date()); S.live=Object.assign({}, S.live, {card:null, by:null, n:0, night:t, history:[], reveal:null, cool:"", ys:0}); save("live"); toast("Pillow Talk starts over"); }
   else {
     const pre={wyr:["wyr|"], match:["mm|"], ttl:["ttl|","ttlg|"], td:["td|","tda|"], dice:["dice|","dicer|"]}[id]||[];
     const keys=Object.keys(S.games||{}).filter(k=>pre.some(p=>k.startsWith(p)) && S.games[k]);
@@ -1294,7 +1294,7 @@ const GAME_INFO = {
   wyr:"Pick one of two. You see each other's picks once you've both answered.",
   td:"Send a truth or a dare. They answer on their own time.",
   dice:"Roll an action, a spot and a how, then tell them how you'd do it.",
-  ttl:"Write two truths and a lie. They guess the lie."
+  ttl:"Write two facts and one cap. They have to call out the cap."
 };
 const MODES = {
   wyr:{label:"Questions", def:"both", opts:[["sweet","Sweet & fun"],["spicy","Spicy"],["both","Mix"]]},
@@ -1369,12 +1369,12 @@ function openChooser(mode){
       const going = cur.id==="cards" ? cardsGoing : true;
       add($("div",{class:"eyebrow",text:"Start a game"}), $("h3",{class:"wq",style:"font-size:24px;margin:0",text:`${cur.emoji} ${cur.name}`}),
         $("button",{class:"btn primary wbig",onclick:()=>enterGame(cur.id),text: gameStarted(cur.id) ? "Keep going" : "Start"}),
-        gameStarted(cur.id) ? $("button",{class:"btn wbig",onclick:()=>{ chooserMode="restart"; draw(); },text:`Restart ${cur.name.toLowerCase()}`}) : null,
+        gameStarted(cur.id) ? $("button",{class:"btn wbig",onclick:()=>{ chooserMode="restart"; draw(); },text:`Restart ${cur.name}`}) : null,
         $("button",{class:"btn wbig",onclick:()=>{ chooserMode="change"; draw(); },text:"Change game"}),
         $("button",{class:"btn ghost",style:"align-self:center",onclick:closeChooser,text:"Not now"}));
     } else if(chooserMode==="restart"){
-      add($("div",{class:"eyebrow",text:"Restart"}), $("h3",{class:"wq",style:"font-size:22px;margin:0",text:`Start ${cur.name.toLowerCase()} over?`}),
-        $("p",{class:"wp",style:"margin:0",text: cur.id==="cards" ? `Tonight goes back to Slow Jams with a fresh deck, on both phones. Hearts you already earned stay.` : `This clears ${cur.name.toLowerCase()} for both of you so you can play it fresh. Hearts you already earned stay.`}),
+      add($("div",{class:"eyebrow",text:"Restart"}), $("h3",{class:"wq",style:"font-size:22px;margin:0",text:`Start ${cur.name} over?`}),
+        $("p",{class:"wp",style:"margin:0",text: cur.id==="cards" ? `Tonight goes back to Slow Jams with a fresh deck, on both phones. Hearts you already earned stay.` : `This clears ${cur.name} for both of you so you can play it fresh. Hearts you already earned stay.`}),
         $("button",{class:"btn primary wbig",onclick:()=>restartGame(cur.id),text:"Yes, start over"}),
         $("button",{class:"btn ghost",style:"align-self:center",onclick:()=>{ chooserMode="main"; draw(); },text:"Never mind"}));
     } else {
@@ -1462,10 +1462,10 @@ function viewHome(){
   /* Right now: what needs you, first */
   const W=gWaiting(), items=[];
   if(started){ items.push(status.trim()); }
-  if(W.td) items.push(`${partner} sent you ${W.td===1?"a truth or dare":W.td+" truths and dares"}`);
-  if(W.ttl) items.push(`${partner} left you a two truths and a lie`);
+  if(W.td) items.push(`${partner} ran you ${W.td===1?"a truth or dare":W.td+" truths and dares"} in Run It`);
+  if(W.ttl) items.push(`${partner} left you a Cap or Facts`);
   if(W.dice) items.push(`${partner} rolled the dice for you`);
-  if(W.wyr) items.push(`${partner} answered ${W.wyr} would you rather${W.wyr===1?"":"s"}. Your turn`);
+  if(W.wyr) items.push(`${partner} answered ${W.wyr} This or That${W.wyr===1?"":"s"}. Your turn`);
   { const dq=dailyQ(ymd(new Date())); if(dq && me && !dailyAns(ymd(new Date()),me)) items.push(dailyAns(ymd(new Date()),other(me)) ? `${partner} answered today's question` : "Today's question is waiting"); }
   if(!items.length) items.push("Nothing waiting. Start something.");
   const gamesWaiting=W.total>0 && !(started && myTurnNow());
