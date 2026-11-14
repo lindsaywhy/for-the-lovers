@@ -10,7 +10,7 @@
 <meta name="apple-mobile-web-app-title" content="For the Lovers">
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="apple-touch-icon" href="icon-180.png">
-<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 200 200'%3E%3Ccircle cx='100' cy='100' r='96' fill='%230d1d16' stroke='%23f4a6bf' stroke-width='8'/%3E%3Ctext x='100' y='132' text-anchor='middle' font-family='Impact,sans-serif' font-size='96' fill='%23f4a6bf'%3EYJ%3C/text%3E%3C/svg%3E">
+<link rel="icon" type="image/png" href="icon-192.png">
 <title>For the Lovers</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Gloock&family=Caveat:wght@600&family=Anton&family=Pinyon+Script&family=Outfit:wght@300;400;500;600;800&display=swap">
@@ -1163,11 +1163,11 @@ function renderTabs(){
     const b=$("button",{class:k==="play"?"tab-play":false,"aria-current":(tab===k||(k==="play"&&(tab==="games"||tab==="setup"))||(k==="rewards"&&tab==="avatars"))?"page":false,onclick:()=>{ if(k==="play"){ playEntry(); return; } tab=k;render();window.scrollTo(0,0)}}); b.innerHTML=ICON[k]; if(short){ b.setAttribute("aria-label",l); b.append($("span",{class:"lbl-full",text:l}),$("span",{class:"lbl-short",text:short})); } else b.append(l); t.append(b);
   });
 }
-const LOGO_SVG = `<svg viewBox="0 0 200 200" role="img" aria-label="Y and J"><g transform="rotate(-8 100 100)">
+const LOGO_SVG = `<svg viewBox="0 0 200 200" role="img" aria-label="Y heart J"><g transform="rotate(-8 100 100)">
 <circle cx="100" cy="100" r="96" fill="#0d1d16" stroke="#f4a6bf" stroke-width="6"/>
-<text x="74" y="138" text-anchor="middle" font-family="Anton, Impact, sans-serif" font-size="104" fill="#f4a6bf">Y</text>
-<text x="128" y="138" text-anchor="middle" font-family="Anton, Impact, sans-serif" font-size="104" fill="none" stroke="#f9cdd8" stroke-width="3">J</text>
-<text x="101" y="120" text-anchor="middle" font-family="Pinyon Script, cursive" font-size="66" fill="#fdf3f5" stroke="#0d1d16" stroke-width="5" paint-order="stroke">&amp;</text>
+<text x="70" y="140" text-anchor="middle" font-family="Anton, Impact, sans-serif" font-size="108" fill="#f4a6bf">Y</text>
+<text x="132" y="140" text-anchor="middle" font-family="Anton, Impact, sans-serif" font-size="108" fill="none" stroke="#f9cdd8" stroke-width="3">J</text>
+<path transform="translate(101,104) scale(1.55)" d="M0,9 C-9,3 -11,-2 -11,-5 A5.5,5.5 0 0 1 0,-7 A5.5,5.5 0 0 1 11,-5 C11,-2 9,3 0,9Z" fill="#fdf3f5" stroke="#0d1d16" stroke-width="3" paint-order="stroke"/>
 </g></svg>`;
 function header(){
   const logo=$("div",{class:"logo"}); logo.innerHTML=LOGO_SVG;
