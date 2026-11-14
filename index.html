@@ -73,6 +73,12 @@ a.btn{color:inherit;text-decoration:none;display:inline-flex;align-items:center;
 @keyframes avbounce{30%{transform:scale(1.04,.96)}60%{transform:scale(.98,1.03)}100%{transform:none}}
 .avpop{position:fixed;z-index:76;color:var(--rose);font-size:20px;pointer-events:none;animation:avpop 1.1s ease-out forwards;text-shadow:0 0 10px #f4a6bf99}
 @keyframes avpop{0%{transform:translateY(0) scale(.4);opacity:0}20%{opacity:1;transform:translateY(-10px) scale(1.1)}100%{transform:translateY(-70px) scale(.8);opacity:0}}
+.owed-row,.bank-row{display:flex;align-items:center;gap:12px;padding:10px 12px;border-radius:14px;background:#ffffff08;border:1px solid var(--line)}
+.owed-text{font-size:15px;overflow-wrap:anywhere}
+.chk{width:30px;height:30px;min-width:30px;border-radius:50%;border:2px solid var(--rose);background:transparent;cursor:pointer;padding:0}
+.chk:active{background:var(--rose)}
+.bank-row .btn{white-space:nowrap}
+.chip.idea{cursor:pointer;background:#f4a6bf14;border-color:#f4a6bf66;color:var(--fg);font:inherit;font-size:13px}
 .games-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
 .game-tile{position:relative;display:flex;flex-direction:column;align-items:flex-start;gap:4px;padding:16px 14px;border-radius:18px;border:1px solid var(--line);background:var(--bg2);color:inherit;font:inherit;text-align:left;cursor:pointer;min-height:118px}
 .game-tile:last-child:nth-child(odd){grid-column:1/-1}
@@ -630,6 +636,7 @@ const DEFAULTS = {
   coupons:{},
   daily:{},
   games:{},
+  rewards:{},
   boundaries:{a:{}, b:{}, custom:[]}
 };
 
@@ -855,6 +862,7 @@ function revealMission(done){
 
 /* ---------- views ---------- */
 const ICON = {
+  rewards:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"><rect x="4" y="9" width="16" height="11" rx="1.5"/><path d="M3 9h18v-3H3zM12 6v14M12 6c-1.5-3-5-3.4-5-1s3.6 1 5 1c1.4 0 5 1.4 5-1s-3.5-2-5 1"/></svg>',
   avatars:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"><path d="M8 3l-4 3 2 4 2-1v12h8V9l2 1 2-4-4-3c-.5 1.6-2 2.6-4 2.6S8.5 4.6 8 3z"/></svg>',
   home:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M4 11l8-7 8 7v9a1 1 0 0 1-1 1h-4v-6h-6v6H5a1 1 0 0 1-1-1z"/></svg>',
   play:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><rect x="5" y="3" width="11" height="16" rx="2"/><path d="M9 7l10 2-3 13-8-2"/></svg>',
@@ -864,8 +872,8 @@ const ICON = {
 };
 function renderTabs(){
   const t=document.getElementById("tabs"); t.innerHTML="";
-  [["home","Home"],["avatars","Undress"],["play","Play"],["limits","Boundaries"],["settings","Settings"]].forEach(([k,l])=>{
-    const b=$("button",{class:k==="play"?"tab-play":false,"aria-current":(tab===k||(k==="play"&&(tab==="games"||tab==="setup")))?"page":false,onclick:()=>{ if(k==="play"){ playEntry(); return; } tab=k;render();window.scrollTo(0,0)}}); b.innerHTML=ICON[k]; b.append(l); t.append(b);
+  [["home","Home"],["rewards","Rewards"],["play","Play"],["limits","Boundaries"],["settings","Settings"]].forEach(([k,l])=>{
+    const b=$("button",{class:k==="play"?"tab-play":false,"aria-current":(tab===k||(k==="play"&&(tab==="games"||tab==="setup"))||(k==="rewards"&&tab==="avatars"))?"page":false,onclick:()=>{ if(k==="play"){ playEntry(); return; } tab=k;render();window.scrollTo(0,0)}}); b.innerHTML=ICON[k]; b.append(l); t.append(b);
   });
 }
 const LOGO_SVG = `<svg viewBox="0 0 200 200" role="img" aria-label="Y and J"><g transform="rotate(-8 100 100)">
@@ -879,7 +887,7 @@ function header(){
   return $("div",{class:"top"},
     $("div",{class:"brand"}, logo, $("div",{}, $("div",{class:"eyebrow",text:connOK?"For the Lovers":"For the Lovers \u00b7 reconnecting"}),
       $("h1",{}, nm("a")+" ", $("em",{text:"&"})," "+nm("b")))),
-    me ? $("button",{class:"hdr-hearts",onclick:()=>{tab="avatars";render();window.scrollTo(0,0);},"aria-label":`You have ${heartsOf(me)} hearts. Open Undress.`},$("span",{class:"hh-n",text:String(heartsOf(me))}),$("span",{text:"\u2665"})) : $("button",{class:"who",onclick:askWho,text:"Who are you?"})
+    me ? $("button",{class:"hdr-hearts",onclick:()=>{tab="rewards";render();window.scrollTo(0,0);},"aria-label":`You have ${heartsOf(me)} hearts. Open the reward bank.`},$("span",{class:"hh-n",text:String(heartsOf(me))}),$("span",{text:"\u2665"})) : $("button",{class:"who",onclick:askWho,text:"Who are you?"})
   );
 }
 function heatMeter(){
@@ -1410,6 +1418,96 @@ function checkGameNews(){
   if(!seen || seen.w!==now.w || seen.m!==now.m) lsSet("ftl_seen_games", now);
 }
 
+/* ---------- reward bank: spend hearts on real-life rewards, check them off when they happen ---------- */
+/* S.rewards uses flat keys so two phones never overwrite each other:
+   r|<id>    = {text, price, by, at}              a reward on the shared list
+   buy|<id>  = {rid, text, price, by, at}         bought by `by`; the other person owes it
+   done|<id> = {by, at}                           it happened (either of you can check it off) */
+const rGet = k => (S.rewards||{})[k] || null;
+function rSet(k, v){ S.rewards = Object.assign({}, S.rewards||{}, {[k]: v}); save("rewards",[k]); }
+const rId = () => Date.now().toString(36)+Math.random().toString(36).slice(2,6);
+function rList(prefix){ return Object.entries(S.rewards||{}).filter(([k,v])=>k.startsWith(prefix)&&v).map(([k,v])=>Object.assign({id:k.slice(prefix.length)},v)).sort((a,b)=>b.at-a.at); }
+const rewardsAll = () => rList("r|").sort((a,b)=>a.price-b.price);
+const buysAll = () => rList("buy|");
+const isDone = id => rGet(`done|${id}`);
+const R_IDEAS = [["10-minute massage",10],["You pick the movie",5],["Breakfast in bed next visit",20],["A pic, on demand",15],["Shower together",25],["One night, my rules",40],["Voice note saying what you'd do to me",10],["Plan our next date",20]];
+let rewardPrice = 10, rewardTab = "bank";
+
+function addReward(text, price){
+  text=(text||"").trim().slice(0,90); price=Math.max(1,Math.min(500,Math.round(+price||0)));
+  if(!text){ toast("Write the reward first."); return; }
+  rSet(`r|${rId()}`, {text, price, by:me, at:Date.now()}); toast(`Added: ${text} · ${price} ♥`); render();
+}
+function buyReward(r){
+  const h=heartsOf(me);
+  if(h<r.price){ toast(`${r.price-h} more ♥ for that one. Play a card or a game.`); return; }
+  S.hearts=Object.assign({}, S.hearts||{}, {[me]: h-r.price}); save("hearts",[me]);
+  rSet(`buy|${rId()}`, {rid:r.id, text:r.text, price:r.price, by:me, at:Date.now()});
+  showMoment("🎁", "Cashed in", r.text, `${nm(other(me))} owes you this now 😏`, 2600);
+  try{ navigator.vibrate && navigator.vibrate([50,40,50]); }catch(e){}
+  render();
+}
+function markHappened(b){ rSet(`done|${b.id}`, {by:me, at:Date.now()}); toast(`Checked off: ${b.text} ✔️`); render(); }
+function undoHappened(b){ rSet(`done|${b.id}`, null); render(); }
+function removeReward(r){ rSet(`r|${r.id}`, null); toast("Removed."); render(); }
+function owedBy(k){ return buysAll().filter(b=>b.by!==k && !isDone(b.id)); }   /* what k still owes */
+
+function checkRewardNews(){
+  if(!me) return; const mine=buysAll().filter(b=>b.by===other(me)).map(b=>b.id), seen=lsGet("ftl_seen_buys",null);
+  if(seen){ const fresh=mine.filter(id=>!seen.includes(id)); if(fresh.length){ const b=buysAll().find(x=>x.id===fresh[0]); if(b) showMoment("🎁", `${nm(other(me))} cashed in`, b.text, "You owe it now. Check it off when it happens 😏", 3200); } }
+  if(!seen || seen.length!==mine.length) lsSet("ftl_seen_buys", mine);
+}
+
+function rewardsSeg(){
+  return $("div",{class:"seg wide",role:"group","aria-label":"Rewards or undress"},
+    $("button",{"aria-pressed":String(tab==="rewards"),onclick:()=>{ tab="rewards"; render(); window.scrollTo(0,0); },text:"🎁 Reward bank"}),
+    $("button",{"aria-pressed":String(tab==="avatars"),onclick:()=>{ tab="avatars"; render(); window.scrollTo(0,0); },text:"👕 Undress"}));
+}
+function viewRewards(){
+  const partner=nm(other(me||"a")), h=heartsOf(me||"a"), list=rewardsAll(), buys=buysAll();
+  const owedToMe=buys.filter(b=>b.by===me && !isDone(b.id)), iOwe=buys.filter(b=>b.by!==me && !isDone(b.id)), done=buys.filter(b=>isDone(b.id));
+  const out=[header(), rewardsSeg(),
+    $("p",{class:"muted",style:"margin:0;font-size:14px",text:`Spend your hearts on real-life rewards. Either of you can add to the list. When you cash one in, ${partner} owes it to you.`})];
+
+  /* what's owed, both ways, with check-offs */
+  const owedRow=(b, mineToGet)=>$("div",{class:"owed-row"},
+    $("button",{class:"chk","aria-label":`Mark ${b.text} as happened`,onclick:()=>markHappened(b)}),
+    $("div",{style:"min-width:0;flex:1"},$("div",{class:"owed-text",text:b.text}),$("div",{class:"muted",style:"font-size:13px",text:`${b.price} ♥ · cashed in ${new Date(b.at).toLocaleDateString(undefined,{month:"short",day:"numeric"})}`})));
+  out.push($("div",{class:"form"},
+    $("h3",{style:"font-size:20px",text:`${partner} owes you`}),
+    owedToMe.length ? $("div",{class:"stack",style:"gap:8px"},...owedToMe.map(b=>owedRow(b,true))) : $("p",{class:"muted",style:"margin:0;font-size:14px",text:"Nothing yet. Cash in a reward below."}),
+    $("h3",{style:"font-size:20px;margin-top:6px",text:`You owe ${partner}`}),
+    iOwe.length ? $("div",{class:"stack",style:"gap:8px"},...iOwe.map(b=>owedRow(b,false))) : $("p",{class:"muted",style:"margin:0;font-size:14px",text:"You're all paid up 😇"}),
+    $("p",{class:"muted",style:"margin:0;font-size:13px",text:"Tap the circle once it happens. Either of you can check it off."})));
+
+  /* the bank */
+  out.push($("div",{class:"form"},
+    $("div",{class:"row",style:"justify-content:space-between;align-items:center"},$("h3",{style:"font-size:20px",text:"Reward bank"}),$("span",{class:"hearts-pill",text:`${h} ♥`})),
+    list.length ? $("div",{class:"stack",style:"gap:8px"},...list.map(r=>{ const can=h>=r.price;
+      return $("div",{class:"bank-row"},
+        $("div",{style:"min-width:0;flex:1"},$("div",{class:"owed-text",text:r.text}),$("div",{class:"muted",style:"font-size:13px",text:`added by ${r.by===me?"you":partner}`})),
+        $("button",{class:"btn "+(can?"primary":"locked"),style:can?"":`--pct:${Math.round(100*h/r.price)}%`,"aria-label":`Cash in ${r.text} for ${r.price} hearts`,onclick:()=>buyReward(r)},`${can?"":"🔒 "}${r.price} ♥`),
+        $("button",{class:"btn small ghost","aria-label":`Remove ${r.text}`,onclick:()=>removeReward(r),text:"✕"})); }))
+      : $("p",{class:"muted",style:"margin:0;font-size:14px",text:"The bank is empty. Add something below, or tap an idea to start."})));
+
+  /* add */
+  const tIn=$("input",{id:"rwIn",maxlength:"90",placeholder:"Something worth saving up for"});
+  const prices=[5,10,15,20,30,50];
+  out.push($("form",{class:"form",onsubmit:e=>{ e.preventDefault(); addReward(tIn.value, rewardPrice); }},
+    $("h3",{style:"font-size:18px",text:"Add a reward"}),
+    $("div",{class:"field"},$("label",{for:"rwIn",text:"The reward"}),tIn),
+    $("div",{class:"field"},$("label",{text:"Price"}),$("div",{class:"seg tight segwrap"},...prices.map(p=>$("button",{type:"button","aria-pressed":String(rewardPrice===p),onclick:()=>{ rewardPrice=p; const v=tIn.value; render(); const el=document.getElementById("rwIn"); if(el){ el.value=v; } },text:`${p} ♥`})))),
+    $("button",{class:"btn primary",type:"submit",style:"align-self:flex-start",text:"Add to the bank"}),
+    list.length<4 ? $("div",{class:"stack",style:"gap:6px"},$("span",{class:"muted",style:"font-size:13px",text:"Ideas, tap to add:"}),
+      $("div",{class:"chips"},...R_IDEAS.filter(([t])=>!list.some(r=>r.text===t)).slice(0,6).map(([t,p])=>$("button",{type:"button",class:"chip idea",onclick:()=>addReward(t,p),text:`${t} · ${p}♥`})))) : null));
+
+  if(done.length) out.push($("details",{class:"g-details"},$("summary",{text:`Already happened (${done.length})`}),
+    ...done.slice(0,30).map(b=>$("div",{class:"row",style:"justify-content:space-between;gap:8px;padding:6px 0"},
+      $("span",{style:"min-width:0",text:`✔️ ${b.text} · for ${b.by===me?"you":partner}`}),
+      $("button",{class:"btn small ghost",onclick:()=>undoHappened(b),text:"Undo"})))));
+  return out;
+}
+
 /* ---------- question of the day: one Deep Talk or Sweet question a day, answered on your own time ---------- */
 const DAILY_SKIP=/\b(send|play|pic|photo|out loud|show|kiss|voice note|right now|pose|record)\b/i;
 function dailyPool(){
@@ -1465,6 +1563,7 @@ function viewHome(){
   if(W.td) items.push(`${partner} ran you ${W.td===1?"a truth or dare":W.td+" truths and dares"} in Run It`);
   if(W.ttl) items.push(`${partner} left you a Cap or Facts`);
   if(W.dice) items.push(`${partner} rolled the dice for you`);
+  { const owe=owedBy(me||"a"); if(owe.length) items.push(`You owe ${partner}: ${owe[0].text}${owe.length>1?` (+${owe.length-1} more)`:""}`); }
   if(W.wyr) items.push(`${partner} answered ${W.wyr} This or That${W.wyr===1?"":"s"}. Your turn`);
   { const dq=dailyQ(ymd(new Date())); if(dq && me && !dailyAns(ymd(new Date()),me)) items.push(dailyAns(ymd(new Date()),other(me)) ? `${partner} answered today's question` : "Today's question is waiting"); }
   if(!items.length) items.push("Nothing waiting. Start something.");
@@ -2414,7 +2513,7 @@ function viewAvatars(){
   const won=couponsOf(t).list.filter(c=>c.claimedBy===me), mine=couponsOf(me), owedToMe=couponsOf(t).owed;
   const cIn=$("input",{id:"cpIn",maxlength:"120",placeholder:`Something ${nm(t)} would love from you`});
   return [header(),
-    $("h2",{style:"font-size:26px",text:"Undress"}),
+    rewardsSeg(),
     $("p",{class:"muted",style:"margin:0;font-size:13px",text:`Spend hearts to undress ${nm(t)}. Fully undressed = you win one of ${hisHer(t)} coupons.`}),
     pickingCostume ? costumePicker(t) : null,
     $("div",{class:"form",style:"align-items:center"},
@@ -2515,10 +2614,10 @@ function render(){
   if(!lsGet("ftl_onboarded",false)){ app.append(...viewOnboard()); document.querySelector("nav.tabs").hidden=true; return; }
   document.querySelector("nav.tabs").hidden=false;
   document.body.classList.toggle("pat", tab==="home");
-  const v = tab==="setup"?viewSetup():tab==="games"?viewGames():tab==="avatars"?viewAvatars():tab==="home"?viewHome():tab==="play"?viewPlay():tab==="memories"?viewMemories():tab==="limits"?viewBoundaries():viewSettings();
+  const v = tab==="rewards"?viewRewards():tab==="setup"?viewSetup():tab==="games"?viewGames():tab==="avatars"?viewAvatars():tab==="home"?viewHome():tab==="play"?viewPlay():tab==="memories"?viewMemories():tab==="limits"?viewBoundaries():viewSettings();
   app.append(...v.flat().filter(Boolean)); renderTabs();
   if(tab==="play"){ const acts=[...app.querySelectorAll(":scope > .actions")]; if(acts.length){ const bar=$("div",{class:"playbar"}); acts.forEach(a=>bar.append(a)); app.append(bar); } app.append(gamesLink()); }
-  checkLevelUp(); checkAvatarNews(); checkDailyNews(); checkGameNews();
+  checkLevelUp(); checkAvatarNews(); checkDailyNews(); checkGameNews(); checkRewardNews();
 }
 loadLocal(); render(); connect();
 </script>
