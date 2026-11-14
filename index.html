@@ -1139,10 +1139,21 @@ function answerRow(key, label, sub, opts){
       sub?$("div",{class:"muted",style:"font-size:13px;margin-left:"+(show?"18px":"0"),text:sub}):null),
     seg);
 }
+/* On the tamer's phone, brat play is never named outright: it's "a little attitude", asked as easy lead-in questions. */
+const isTamer = () => !!me && me!==bratKey();
+const SOFT_BRAT = ["A little attitude","When she pushes your buttons on purpose"];
+function topicLabel(k, n, sub){ return (k==="brat" && isTamer()) ? SOFT_BRAT : [n, sub]; }
+const BRAT_EASE = ["brat:q1","brat:q2","brat:q3"];
+function settleBratEase(){
+  const v=BRAT_EASE.map(k=>answer(me,k)); if(v.some(x=>!x)) return;
+  const yes=v.filter(x=>x==="yes").length, no=v.filter(x=>x==="no").length;
+  const r = yes===3 ? "yes" : (no===3 ? "no" : (yes>=2 && no===0 ? "yes" : "maybe"));
+  if(answer(me,"brat")!==r){ const b=JSON.parse(JSON.stringify(S.boundaries||{a:{},b:{},custom:[]})); b[me]=Object.assign({},b[me]||{},{brat:r}); S.boundaries=b; save("boundaries"); }
+}
 function allItems(){
   const out=[];
   for(const g of TOPIC_GROUPS){
-    (g.items||[]).forEach(([k,n])=>out.push([k,n]));
+    (g.items||[]).forEach(([k,n])=>out.push([k,topicLabel(k,n)[0]]));
     (g.pairs||[]).forEach(([k,n])=>{ out.push([k+":give",n+" (giving)"]); out.push([k+":get",n+" (getting)"]); });
     (g.parts||[]).forEach(p=>out.push(["body:"+p,p]));
   }
@@ -1164,7 +1175,7 @@ function allItems(){
   out.push($("div",{class:"form"},
     $("h3",{style:"font-size:20px",text:"Safeword"}),
     $("div",{class:"field"},$("label",{for:"sw",text:"If either of you says it, everything stops"}),swIn),
-    S.settings.safeword ? null : $("p",{class:"muted",style:"margin:0;font-size:13px",text:"It comes up before the first brat card each night. The Safeword button on Play also cools the night down to sweet cards."})));
+    S.settings.safeword ? null : $("p",{class:"muted",style:"margin:0;font-size:13px",text:"It comes up before things get spicy each night. The Safeword button on Play also cools the night down to sweet cards."})));
   /* Where you line up. */
   const items=allItems(), A=k=>answer(me,k), T=k=>answer(other(me),k);
   const both=items.filter(([k])=>["yes","love"].includes(A(k)) && ["yes","love"].includes(T(k)));
@@ -1195,7 +1206,7 @@ function allItems(){
   out.push($("h3",{style:"font-size:20px;margin:6px 2px 0",text:"Your answers"}),$("p",{class:"muted",style:"margin:-4px 2px 0;font-size:13px",text:"Tap a section to open it."}));
   for(const g of TOPIC_GROUPS){
     const rows=[]; const keys=[];
-    if(g.items) for(const [k,name,sub] of g.items){ rows.push(answerRow(k,name,sub)); keys.push(k); }
+    if(g.items) for(const [k,name,sub] of g.items){ const [n2,s2]=topicLabel(k,name,sub); rows.push(answerRow(k,n2,s2)); keys.push(k); }
     if(g.pairs){
       rows.push($("p",{class:"muted",style:"margin:0;font-size:13px",text:"Giving and getting are separate. You can be into one and not the other."}));
       for(const [k,name] of g.pairs){ rows.push(answerRow(k+":give",name+" (giving)","")); rows.push(answerRow(k+":get",name+" (getting)","")); keys.push(k+":give",k+":get"); }
@@ -2084,7 +2095,7 @@ function viewPlay(){
     : myTurn ? "Your turn" : [$("em",{text:nm(nextUp)}),"'s turn"]));
   out.push($("div",{class:"stage"},cardEl()));
   out.push(...guessUI());
-  if(fresh && S.live.card && S.live.card.swCheck && !S.live.card.done) out.push($("div",{class:"checkin",text: S.settings.safeword ? `First brat card tonight. Both of you say your safeword out loud before ${nm(by)} reads it: \u201c${S.settings.safeword}.\u201d If either of you says it, everything stops.` : `First brat card tonight. Before ${nm(by)} reads it, pick a safeword together and save it in Boundaries. If either of you says it, everything stops.`}));
+  if(fresh && S.live.card && S.live.card.swCheck && !S.live.card.done) out.push($("div",{class:"checkin",text: S.settings.safeword ? `Turning it up. Both of you say your safeword out loud before ${nm(by)} reads this one: \u201c${S.settings.safeword}.\u201d If either of you says it, everything stops.` : `Turning it up. Before ${nm(by)} reads this one, pick a safeword together and save it in Boundaries. If either of you says it, everything stops.`}));
   if(fresh && S.live.card && S.live.card.checkIn && (mine || S.live.card.done)) out.push($("div",{class:"checkin",text:"Check in first: one of you said Maybe to this. Ask, and either of you can pass."}));
   out.push($("div",{class:"actions"},
     open ? $("button",{class:"btn primary",onclick:markDone,text:"Done \u2713"})
@@ -2213,6 +2224,15 @@ const WIZ = {
   control:{q:"Do you like one person taking the lead while the other follows?",
     what:"One of you gives the directions: what to do, what to touch, how slow to go. The other one follows. You can take turns being in charge.",
     game:"For the next two minutes, {you} follows your instructions. Nothing else."},
+  "brat:q1":{q:"Do you like it when {brat} gets a little mouthy with you?",
+    what:"Talking slick, teasing you, giving you a hard time on purpose. Playful, never for real.",
+    game:"Make {brat} say “please” properly before anyone draws another card."},
+  "brat:q2":{q:"When she pushes your buttons on purpose, do you like putting her back in line?",
+    what:"Calling her out, making her ask nicely, or handing her a little consequence you pick. Your call how.",
+    game:"{brat} doesn't get to talk for the next two minutes. Only “yes sir.”"},
+  "brat:q3":{q:"Would you want to be the one who sets the rules sometimes?",
+    what:"Little rules for a night, like no talking back. If she breaks one, she owes you something you pick.",
+    game:"Text {brat} three rules for the rest of tonight."},
   brat:{q:"Are you into brat and tamer play?",
     what:"{brat} plays the brat: talking back, teasing, breaking little rules on purpose. {tamer} plays the tamer: calling her out and handing out playful consequences. It's a game you're both in on.",
     tip:"This is the one where a safeword matters most. You can set yours at the top of Boundaries."},
@@ -2262,7 +2282,7 @@ const WIZ = {
 };
 const WIZ_GROUP = {
   "Talk":{e:"🗣️", t:"Say it out loud", d:"Dirty talk, fantasies, what you call each other, and the pics and voice notes you send."},
-  "Power":{e:"👑", t:"Who's in charge", d:"Taking control, following orders, brat vs. tamer, begging, and being made to wait."},
+  "Power":{e:"👑", t:"Who's in charge", d:"Taking control, following orders, a little attitude, begging, and being made to wait."},
   "Rough play":{e:"🖐️", t:"A little rough", d:"Spanking, hair pulling, being held down. Yes to some, no to others. Totally fine."},
   "Toys and touch":{e:"🎛️", t:"Toys and playing solo", d:"Toys, plugs, the remote in their hands, and touching yourself while they listen."},
   "Giving and getting":{e:"🔄", t:"Giving and getting", d:"Oral and more. Asked both ways, because loving to give doesn't mean loving to get."},
@@ -2275,7 +2295,7 @@ function wizSteps(){
   const st=[{t:"intro"}];
   for(const g of TOPIC_GROUPS){
     st.push({t:"group",g});
-    (g.items||[]).forEach(([k,name])=>st.push({t:"item",k,name,g:g.title}));
+    (g.items||[]).forEach(([k,name])=>{ if(k==="brat" && isTamer()) BRAT_EASE.forEach(q=>st.push({t:"item",k:q,name:SOFT_BRAT[0],g:g.title})); else st.push({t:"item",k,name,g:g.title}); });
     (g.pairs||[]).forEach(([k,name])=>st.push({t:"pair",k,name,g:g.title}));
     if(g.parts) st.push({t:"body",g});
   }
@@ -2299,6 +2319,7 @@ function wizExit(){ wiz=null; lsSet("ftl_wiz",null); render(); window.scrollTo(0
 function wizAnswer(k,v){
   const b=JSON.parse(JSON.stringify(S.boundaries||{a:{},b:{},custom:[]}));
   b[me]=Object.assign({},b[me]||{},{[k]:v}); S.boundaries=b; save("boundaries");
+  if(k.startsWith("brat:q")) settleBratEase();
   setTimeout(()=>wizGo(wiz+1),160); render();
 }
 function theirSays(k){ const t=answer(other(me),k); return t ? `${nm(other(me))} said ${ANS[t]}.` : `${nm(other(me))} hasn't answered this yet.`; }
@@ -2323,7 +2344,7 @@ function viewWizard(){
       $("p",{class:"wp muted",text:`Your answers stay private. Nobody sees anything until you've both finished, then it's revealed to both of you at the same time. You can change anything later. About five minutes.`}),
       $("button",{class:"btn primary wbig",onclick:()=>wizGo(1),text:"Let's start"}));
   } else if(s.t==="group"){
-    const G=WIZ_GROUP[s.g.title]||{e:"✨",t:s.g.title,d:""}, gi=TOPIC_GROUPS.indexOf(s.g), names=(s.g.items||[]).map(x=>x[1]).concat((s.g.pairs||[]).map(x=>x[1])), cnt=(s.g.items||[]).length+(s.g.pairs||[]).length+(s.g.parts?1:0);
+    const G=WIZ_GROUP[s.g.title]||{e:"✨",t:s.g.title,d:""}, gi=TOPIC_GROUPS.indexOf(s.g), names=(s.g.items||[]).map(x=>topicLabel(x[0],x[1])[0]).concat((s.g.pairs||[]).map(x=>x[1])), cnt=(s.g.items||[]).length+((s.g.items||[]).some(x=>x[0]==="brat")&&isTamer()?2:0)+(s.g.pairs||[]).length+(s.g.parts?1:0);
     card.push($("div",{class:"chap"},
       $("div",{class:"eyebrow",text:`Part ${gi+1} of ${TOPIC_GROUPS.length}`}),
       $("div",{class:"chap-emoji",text:G.e}),
@@ -3046,7 +3067,7 @@ function viewOnboard(){
     const swIn=$("input",{id:"obSw",value:S.settings.safeword||"",placeholder:"Something you'd never say by accident",maxlength:"40"});
     swIn.addEventListener("change",()=>{ S.settings=Object.assign({},S.settings,{safeword:swIn.value.trim().slice(0,40)}); save("settings"); });
     c.push($("h2",{class:"wq",text:"Pick a safeword"}),
-      $("p",{class:"wp",text:"If either of you says it, everything stops, no questions asked. The game reminds you of it before the first brat card each night, and the Safeword button on the Play screen cools the night down to sweet cards."}),
+      $("p",{class:"wp",text:"If either of you says it, everything stops, no questions asked. The game reminds you of it before things get spicy each night, and the Safeword button on the Play screen cools the night down to sweet cards."}),
       $("div",{class:"field"},$("label",{for:"obSw",text:"Your safeword (you two share one)"}),swIn),
       next(S.settings.safeword?"Next":"Next, or skip for now",()=>{ const v=swIn.value.trim(); if(v!==(S.settings.safeword||"")){ S.settings=Object.assign({},S.settings,{safeword:v.slice(0,40)}); save("settings"); } obGo(5); }),back());
   } else if(ob===5){
