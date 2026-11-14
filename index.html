@@ -122,7 +122,10 @@ a.btn{color:inherit;text-decoration:none;display:inline-flex;align-items:center;
 .ourlist-row{display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:14px;border:1px solid var(--line);background:#ffffff06}
 .ourlist-row .ol-t{flex:1;min-width:0}
 .ourlist-row.done{opacity:.8}
-.alert-ask{display:flex;align-items:center;gap:12px;padding:14px;border-radius:18px;border:1px dashed var(--rose);background:#f4a6bf0d}
+.alert-ask{display:flex;align-items:center;gap:8px;padding:10px 12px;border-radius:16px;border:1px dashed var(--rose);background:#f4a6bf0d}
+.al-row{display:flex;gap:10px;align-items:flex-start}
+.al-dot{width:10px;height:10px;border-radius:50%;margin-top:6px;flex:none;background:#ffffff33;box-shadow:0 0 0 3px #ffffff10}
+.al-dot.on{background:#7ee0a3;box-shadow:0 0 0 3px #7ee0a333}
 .gip .np-track{height:6px}
 .games-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
 .game-tile{position:relative;display:flex;flex-direction:column;align-items:flex-start;gap:4px;padding:16px 14px;border-radius:18px;border:1px solid var(--line);background:var(--bg2);color:inherit;font:inherit;text-align:left;cursor:pointer;min-height:118px}
@@ -734,7 +737,11 @@ function pushHereOn(){ return !!(me && ((S.push||{})[me]||{})[devId()]) && typeo
 function savePushSub(sub){
   const mine=Object.assign({}, (S.push||{})[me]||{});
   if(sub) mine[devId()]=sub; else delete mine[devId()];
-  S.push=Object.assign({}, S.push||{}, {[me]:mine}); save("push",[me]);
+  S.push=Object.assign({}, S.push||{}, {[me]:mine}); return save("push",[me]);
+}
+async function pushTest(quiet){
+  const j = await pushSend(me, "For the Lovers", "Alerts are on 🔔 This is what a ping looks like.", "test");
+  if(!quiet) toast(j && j.sent ? "Test sent. It should pop up in a few seconds." : "Couldn't reach this device. Turn alerts off and on again.");
 }
 async function pushEnable(){
   if(!me){ askWho(); return; }
@@ -745,8 +752,8 @@ async function pushEnable(){
     const reg = swReg || await navigator.serviceWorker.ready;
     let sub = await reg.pushManager.getSubscription();
     if(!sub) sub = await reg.pushManager.subscribe({userVisibleOnly:true, applicationServerKey:b64u(VAPID)});
-    savePushSub(sub.toJSON()); lsSet("ftl_alerts_dismiss",true);
-    toast("Alerts on 🔔"); render();
+    await savePushSub(sub.toJSON()); lsSet("ftl_alerts_dismiss",true);
+    toast("Alerts on 🔔 Sending you a test…"); render(); pushTest(true);
   }catch(e){ toast("Couldn't turn alerts on here. Try again in a minute."); }
 }
 async function pushDisable(){
@@ -762,11 +769,11 @@ async function pushRefresh(){
   }catch(e){}
 }
 function pushSend(to, title, body, tag){
-  if(!room) return;
-  fetch(SB_URL+"/functions/v1/ftl-notify", {method:"POST", headers:{"Content-Type":"application/json"},
+  if(!room) return Promise.resolve({sent:0});
+  return fetch(SB_URL+"/functions/v1/ftl-notify", {method:"POST", headers:{"Content-Type":"application/json"},
     body:JSON.stringify({room:room.id, secret:room.secret, to, title, body, tag})})
-    .then(r=>r.json()).then(j=>{ if(j && j.gone && j.gone.length){ const theirs=Object.assign({}, (S.push||{})[to]||{}); j.gone.forEach(id=>delete theirs[id]); S.push=Object.assign({}, S.push||{}, {[to]:theirs}); save("push",[to]); } })
-    .catch(()=>{});
+    .then(r=>r.json()).then(j=>{ if(j && j.gone && j.gone.length){ const theirs=Object.assign({}, (S.push||{})[to]||{}); j.gone.forEach(id=>delete theirs[id]); S.push=Object.assign({}, S.push||{}, {[to]:theirs}); save("push",[to]); } return j; })
+    .catch(()=>({sent:0}));
 }
 function pushOn(k){ return Object.values((S.push||{})[k]||{}).some(Boolean); }
 function notifyOther(tag, body, gap){
@@ -787,20 +794,25 @@ function goTo(tag){
 }
 function goFromHash(){ const m=(location.hash||"").match(/go=([a-z]+)/); if(m){ try{ history.replaceState(null,"",location.pathname+location.search); }catch(e){} setTimeout(()=>goTo(m[1]),50); } }
 try{ navigator.serviceWorker && navigator.serviceWorker.addEventListener("message", e=>{ if(e.data && e.data.go) goTo(e.data.go); }); }catch(e){}
+function alertNudgeLink(){ const o=other(me||"a"); return nudgeLink(`Turn on alerts in our game so you know when it's your turn 🔔 Settings → Alerts → Turn on.`); }
 function alertsCard(compact){
-  const here=pushHereOn(), P=nm(other(me||"a")), theirs=pushOn(other(me||"a"));
+  const here=pushHereOn(), o=other(me||"a"), P=nm(o), theirs=pushOn(o);
   if(compact){
     if(here || lsGet("ftl_alerts_dismiss",false)) return null;
     return $("div",{class:"alert-ask"},
-      $("div",{style:"min-width:0;flex:1"},$("div",{style:"font-weight:600",text:"🔔 Know when it's your turn"}),$("div",{class:"muted",style:"font-size:13px",text:`Get a ping when ${P} answers, sends you something, or hands you the turn.`})),
-      $("div",{class:"row",style:"gap:6px;flex-wrap:nowrap"},$("button",{class:"btn primary small",onclick:()=>pushEnable(),text:"Turn on"}),$("button",{class:"btn small ghost","aria-label":"Not now",onclick:()=>{ lsSet("ftl_alerts_dismiss",true); render(); },text:"✕"})));
+      $("span",{style:"min-width:0;flex:1;font-size:14px",text:`🔔 Get a ping when it's your turn`}),
+      $("button",{class:"btn primary small",onclick:()=>pushEnable(),text:"Turn on"}),
+      $("button",{class:"btn small ghost","aria-label":"Not now",onclick:()=>{ lsSet("ftl_alerts_dismiss",true); render(); },text:"✕"}));
   }
+  const row=(on,label,sub)=>$("div",{class:"al-row"},$("span",{class:"al-dot"+(on?" on":"")}),$("div",{style:"min-width:0;flex:1"},$("div",{style:"font-weight:600",text:label}),$("div",{class:"muted",style:"font-size:13px",text:sub})));
   return $("div",{class:"form"},
     $("h3",{style:"font-size:20px",text:"Alerts"}),
-    $("p",{class:"muted",style:"margin:0;font-size:13px",text:here ? `On for this device. You'll get a ping when ${P} answers, sends you something, or it's your turn.` : (pushSupported() ? `Get a ping on this device when ${P} answers, sends you something, or it's your turn.` : pushReason())}),
-    $("div",{class:"row",style:"gap:8px"},
-      here ? $("button",{class:"btn",onclick:()=>pushDisable(),text:"Turn off on this device"}) : $("button",{class:"btn primary",onclick:()=>pushEnable(),text:"Turn on alerts"})),
-    $("p",{class:"muted",style:"margin:0;font-size:13px",text: theirs ? `${P} has alerts on too, so your moves reach ${himHer(other(me||"a"))}.` : `${P} hasn't turned alerts on yet. Your moves will wait until ${heShe(other(me||"a"))} opens the game.`}));
+    row(here, here?"This device: on":"This device: off", here?`You'll get a ping when ${P} answers, sends you something, or it's your turn.`:(pushSupported()?"Turn it on to get a ping when it's your turn.":pushReason())),
+    $("div",{class:"row",style:"gap:8px;flex-wrap:wrap"},
+      here ? $("button",{class:"btn",onclick:()=>pushTest(),text:"Send me a test"}) : $("button",{class:"btn primary",onclick:()=>pushEnable(),text:"Turn on alerts"}),
+      here ? $("button",{class:"btn small ghost",onclick:()=>pushDisable(),text:"Turn off"}) : null),
+    row(theirs, theirs?`${P}: on`:`${P}: off`, theirs?`Your moves reach ${himHer(o)} as a ping.`:`${P} won't hear about your moves until ${heShe(o)} turns alerts on.`),
+    theirs ? null : $("a",{class:"btn small",style:"align-self:flex-start",href:alertNudgeLink(),text:`Text ${P} to turn ${hisHer(o)} on`}));
 }
 let tab = "home", db = null, synced = false, lastCardKey = null, myMission = null;
 function lsGet(k,d){try{const v=localStorage.getItem(k);return v==null?d:JSON.parse(v)}catch(e){return d}}
@@ -1880,6 +1892,7 @@ function viewHome(){
   rows.sort((a,b)=>(b.hot?1:0)-(a.hot?1:0));
   const extras=[];
   { const owe=owedBy(me||"a"); if(owe.length) extras.push({t:`You owe ${partner}: ${owe[0].text}${owe.length>1?` (+${owe.length-1} more)`:""}`, go:()=>{ tab="rewards"; render(); window.scrollTo(0,0); }}); }
+  if(me && pushHereOn() && !pushOn(other(me)) && !lsGet("ftl_alert_nudged",false)) extras.push({t:`${partner}'s alerts are off. Text ${himHer(other(me))} to turn them on`, go:()=>{ lsSet("ftl_alert_nudged",true); location.href=alertNudgeLink(); render(); }});
   { const dq=dailyQ(ymd(new Date())); if(dq && me && !dailyAns(ymd(new Date()),me)) extras.push({t: dailyAns(ymd(new Date()),other(me)) ? `${partner} answered today's question` : "Today's question is waiting", go:()=>{ const el=document.querySelector(".daily"); if(el) el.scrollIntoView({behavior:"smooth",block:"center"}); }}); }
   const gameRow=p=>$("div",{class:"gip"+(p.hot?" hot":"")},
     $("button",{class:"gip-main",onclick:()=>{ if(!me){ askWho(); return; } gameStarted(p.id) ? openGame(p.id) : enterGame(p.id); },"aria-label":`${p.name}: ${p.pr.text}. Open it.`},
@@ -1916,7 +1929,7 @@ function viewHome(){
   return [
     header(),
     $("div",{class:"hello"},$("div",{class:"eyebrow",text: g.part==="late" ? "After hours" : g.part==="morning" ? "Good morning" : g.part==="day" ? "Hey you" : "This evening"}),$("p",{class:"hello-text",text:g.text})),
-    tonight, alertsCard(true), dailyCard(), openGames().length?null:gamesCard(), undressCard(), notes, jarBox,
+    tonight, dailyCard(), alertsCard(true), openGames().length?null:gamesCard(), undressCard(), notes, jarBox,
     $("button",{class:"btn ghost",style:"align-self:center",onclick:()=>{ tab="memories"; render(); window.scrollTo(0,0); },text:`\u2661 Kept cards (${(S.memories.items||[]).length})`})
   ];
 }
