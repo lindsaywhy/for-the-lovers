@@ -139,6 +139,14 @@ a.btn{color:inherit;text-decoration:none;display:inline-flex;align-items:center;
 .subfold .chip{cursor:pointer;background:transparent;font:inherit;font-size:13px;padding:6px 12px}
 .subfold .chip.on{border-color:var(--rose);background:var(--rose);color:var(--deep);font-weight:600}
 .subfold .seg button[aria-pressed="true"]{background:var(--rose);color:var(--deep)}
+.dyn-card{border-color:var(--amber)}
+.ag-sec{display:flex;flex-direction:column;gap:10px}
+.ag-sec h4{margin:0;font-family:var(--display);font-size:18px;font-weight:400}
+.ag-q{display:flex;flex-direction:column;gap:6px;padding:10px 12px;border-radius:14px;background:#ffffff06;border:1px solid var(--line)}
+.ag-qt{font-size:13px;color:var(--muted)}
+.ag-a{display:flex;gap:8px;font-size:15px;line-height:1.4}
+.ag-who{flex:none;font-weight:600;color:var(--rose)}
+#dynIn{min-height:110px}
 .alert-ask{display:flex;align-items:center;gap:8px;padding:10px 12px;border-radius:16px;border:1px dashed var(--rose);background:#f4a6bf0d}
 .al-row{display:flex;gap:10px;align-items:flex-start}
 .al-dot{width:10px;height:10px;border-radius:50%;margin-top:6px;flex:none;background:#ffffff33;box-shadow:0 0 0 3px #ffffff10}
@@ -731,6 +739,7 @@ const DEFAULTS = {
   games:{},
   rewards:{},
   push:{},
+  dynamic:{},
   boundaries:{a:{}, b:{}, custom:[]}
 };
 
@@ -932,7 +941,9 @@ function save(name, keys){
       /* Avatars, hearts and coupons: send only the people this change touched. */
       if(keys && keys.length) return rpc("ftl_merge", {p_room:room.id, p_secret:room.secret, p_key:name, p_patch:Object.fromEntries(keys.map(k=>[k, body[k]===undefined?null:body[k]]))});
       return rpc("ftl_set", {p_room:room.id, p_secret:room.secret, p_key:name, p_data:body}); })
-    .then(v=>{ versions[name] = v; online(true); })
+    /* A merge only sent our keys; the other phone may have changed other keys since our last pull.
+       So after a merge, mark this key stale and let the next pull bring in the full server copy. */
+    .then(v=>{ versions[name] = (keys && keys.length) ? -1 : v; online(true); })
     .catch(()=>{ online(false); toast("Couldn't save. Check your connection."); })
     .finally(()=>{ pending[name]--; });
   return queues[name];
@@ -1246,11 +1257,147 @@ function allItems(){
   }
   ((S.boundaries||{}).custom||[]).forEach(c=>out.push(["c:"+c.id,c.name]));
   return out;
-}function viewBoundaries(){
+}/* ---------- Our dynamic: a setup you both answer privately, then one shared agreement ----------
+   S.dynamic flat keys: "<k>|<qid>" = {t, at}, "<k>|_done" = time, "<k>|rev|<qid>" = {t, at} (latest check-in), "<k>|_rev" = time.
+   who: "tamer" = he answers (she asks), "brat" = she answers (he asks), "both" = you both answer. */
+const DYN = [
+ {id:"lead", e:"👑", t:"How he leads", d:"What it looks like when he's running things, and how you want to show up for it.", q:[
+  ["lead1","tamer","When you're in charge, what's the first thing you want me to do?"],
+  ["lead2","tamer","What does it look like when you're running things? Walk me through it."],
+  ["lead3","tamer","You like giving me instructions step by step, or telling me what you want and letting me figure it out?"],
+  ["lead4","tamer","How do you want me to talk to you when you're in charge?"],
+  ["lead5","tamer","What should I call you when you take over?"],
+  ["lead6","brat","What does it feel like for you when I take over?"],
+  ["lead7","brat","What's one thing I do that makes you want to listen?"]]},
+ {id:"push", e:"😏", t:"Pushing buttons", d:"The fun kind of trouble, and where it stops being fun.", q:[
+  ["push1","brat","What's your favorite way to get under my skin?"],
+  ["push2","brat","When you act up, what are you really hoping I do?"],
+  ["push3","tamer","What's something I do that gets to you, in a good way?"],
+  ["push4","tamer","When I'm testing you, how can you tell I'm playing and not for real?"],
+  ["push5","both","What's the one thing that's off limits, even playing?"],
+  ["push6","both","What's a sign it stopped being fun?"]]},
+ {id:"rules", e:"📜", t:"Rules", d:"Small things that keep it going between calls.", q:[
+  ["rule1","tamer","If you could give me one rule for every day, what would it be?"],
+  ["rule2","tamer","What's a rule you'd want me following when we're on the phone?"],
+  ["rule3","brat","What's a rule you'd actually like having?"],
+  ["rule4","brat","Is there a rule you want that's just between us? Nobody else would ever know."],
+  ["rule5","both","How long should a rule last? A night, a week, or until we change it?"],
+  ["rule6","both","How do we change a rule if it's not working?"]]},
+ {id:"cons", e:"⚖️", t:"Consequences", d:"So what happens next is never a guess.", q:[
+  ["cons1","tamer","When I break a rule, what happens?"],
+  ["cons2","tamer","Give me three things you'd do when I act up. I'll pick which ones are fair game."],
+  ["cons3","brat","What consequence would actually get to you, in a good way?"],
+  ["cons4","brat","Is there a consequence you'd never want, even playing?"],
+  ["cons5","both","Do consequences happen right away, or do we save them for later?"],
+  ["cons6","both","What do we do if one of us isn't in the mood for it that night?"]]},
+ {id:"praise", e:"💐", t:"Rewards and praise", d:"What earns it, and how you say thank you.", q:[
+  ["prai1","tamer","What do you want to hear from me when you did something right?"],
+  ["prai2","tamer","How do you like to be thanked?"],
+  ["prai3","brat","What makes you feel like you earned a “good girl”?"],
+  ["prai4","brat","What's a reward you'd actually work for?"],
+  ["prai5","tamer","How do you like me to thank you after a good night? Be specific."],
+  ["prai6","both","What's one thing the other person does that deserves more credit?"]]},
+ {id:"care", e:"🫶", t:"Check-ins and aftercare", d:"Taking care of each other during and after.", q:[
+  ["care1","both","In the middle of it, how do you want me to check on you without killing the mood?"],
+  ["care2","both","Besides the safeword, what's a quiet way to say “slow down”?"],
+  ["care3","both","After things get intense, what do you need from me? Talking, holding, quiet, or something else?"],
+  ["care4","brat","How long after do you want me to stay on the phone?"],
+  ["care5","tamer","How do you want me to take care of you after you've been in charge?"],
+  ["care6","both","The next day, how should we check in about how it went?"]]}
+];
+const DYN_REVIEW = [["rev1","What's been working for us?"],["rev2","What do you want more of?"],["rev3","Anything you want to stop, or change?"],["rev4","Any new rule you want to try?"],["rev5","On a scale of 1 to 10, how good have we been taking care of each other?"]];
+const DYN_REVIEW_DAYS = 21;
+const dGet = k => (S.dynamic||{})[k]||null;
+function dSet(patch){ S.dynamic=Object.assign({}, S.dynamic||{}, patch); save("dynamic", Object.keys(patch)); }
+const roleOf = k => k===bratKey() ? "brat" : "tamer";
+const dynMine = () => DYN.flatMap(s=>s.q.filter(q=>q[1]==="both" || q[1]===roleOf(me)).map(q=>({sec:s, id:q[0], who:q[1], text:q[2]})));
+const dynDone = k => !!dGet(`${k}|_done`);
+const dynRevealed = () => dynDone("a") && dynDone("b");
+let dynStep = null, dynMode = "setup", dynDraft = {};
+function dynSteps(){
+  if(dynMode==="review") return [{t:"rintro"}].concat(DYN_REVIEW.map(([id,text])=>({t:"rq", id, text}))).concat([{t:"rdone"}]);
+  const st=[{t:"intro"}], mine=dynMine();
+  for(const s of DYN){ st.push({t:"sec", sec:s}); mine.filter(q=>q.sec===s).forEach(q=>st.push(Object.assign({t:"q"},q))); }
+  st.push({t:"done"}); return st;
+}
+function dynStart(mode){ dynMode=mode||"setup"; dynStep=0; render(); window.scrollTo(0,0); }
+function dynGo(i){ const n=dynSteps().length; dynStep=Math.max(0,Math.min(n-1,i));
+  if(dynStep===n-1){ if(dynMode==="setup" && !dynDone(me)) dSet({[`${me}|_done`]:Date.now()}); if(dynMode==="review") dSet({[`${me}|_rev`]:Date.now()}); }
+  render(); window.scrollTo(0,0); }
+function dynExit(){ dynStep=null; tab="limits"; render(); window.scrollTo(0,0); }
+function dynAsker(who){ return who==="both" ? "You both answer" : `${nm(other(me))} asks`; }
+function viewDynamic(){
+  const steps=dynSteps(), s=steps[dynStep], n=steps.length, P=nm(other(me));
+  const top=$("div",{class:"wtop"},$("button",{class:"btn small ghost",onclick:dynExit,text:"Save and exit"}),
+    $("div",{class:"prog",style:"margin:0"},$("i",{style:`width:${Math.round(100*dynStep/(n-1))}%`})),$("span",{class:"muted",style:"font-size:13px;white-space:nowrap",text:`${dynStep+1} of ${n}`}));
+  const nav=(next,label)=>$("div",{class:"wnav"}, dynStep>0?$("button",{class:"btn ghost",onclick:()=>dynGo(dynStep-1),text:"Back"}):$("span",{}), $("button",{class:"btn primary",onclick:next,text:label}));
+  const card=[];
+  if(s.t==="intro") card.push($("div",{class:"chap-emoji",text:"🤝"}),$("h2",{class:"wq",style:"text-align:center",text:"Our dynamic"}),
+    $("p",{class:"wp",style:"text-align:center",text:`How ${roleOf(me)==="tamer"?"you lead":"he leads"}, the rules, what happens when somebody acts up, how you thank each other, and how you take care of each other after. Six short parts, in your own words.`}),
+    $("p",{class:"wp muted",style:"text-align:center",text:"Your answers stay private until you've both finished. Then it all comes together as one agreement you can both read and change anytime."}),
+    nav(()=>dynGo(1),"Let's start"));
+  else if(s.t==="sec"){ const i=DYN.indexOf(s.sec); card.push($("div",{class:"chap"},$("div",{class:"eyebrow",text:`Part ${i+1} of ${DYN.length}`}),$("div",{class:"chap-emoji",text:s.sec.e}),$("h2",{class:"wq",style:"text-align:center",text:s.sec.t}),$("p",{class:"wp",style:"text-align:center",text:s.sec.d})),nav(()=>dynGo(dynStep+1),"Let's go")); }
+  else if(s.t==="q" || s.t==="rq"){
+    const key = s.t==="q" ? `${me}|${s.id}` : `${me}|rev|${s.id}`, cur=dGet(key);
+    const ta=$("textarea",{id:"dynIn",rows:"4",maxlength:"600",placeholder:"In your own words…"}); ta.value = key in dynDraft ? dynDraft[key] : (cur?cur.t:""); ta.addEventListener("input",()=>{ dynDraft[key]=ta.value; });
+    const saveNext=()=>{ const v=ta.value.trim(); if(v) dSet({[key]:{t:v.slice(0,600),at:Date.now()}}); dynGo(dynStep+1); };
+    card.push($("div",{class:"eyebrow",text: s.t==="q" ? `${s.sec.e} ${s.sec.t} · ${dynAsker(s.who)}` : "🔁 Check-in"}),
+      $("h2",{class:"wq",text:s.text}), ta,
+      $("div",{class:"wnav"}, dynStep>0?$("button",{class:"btn ghost",onclick:()=>dynGo(dynStep-1),text:"Back"}):$("span",{}),
+        $("div",{class:"row",style:"gap:8px"},$("button",{class:"btn ghost",onclick:()=>dynGo(dynStep+1),text:"Skip"}),$("button",{class:"btn primary",onclick:saveNext,text:"Next"}))));
+    setTimeout(()=>{ const el=document.getElementById("dynIn"); if(el && !el.value) el.focus(); },50);
+  }
+  else if(s.t==="done"){
+    if(dynRevealed()) card.push($("div",{class:"chap-emoji",text:"🤝"}),$("h2",{class:"wq",style:"text-align:center",text:"You both finished"}),$("p",{class:"wp",style:"text-align:center",text:`Your agreement is ready. Read it together with ${P}.`}),$("button",{class:"btn primary wbig",onclick:()=>{ lsSet("ftl_dyn_seen",true); dynExit(); },text:"See our agreement"}));
+    else card.push($("div",{class:"chap-emoji",text:"🔒"}),$("h2",{class:"wq",style:"text-align:center",text:"Locked in"}),$("p",{class:"wp",style:"text-align:center",text:"Your answers stay private until you've both finished. Then your agreement shows up for both of you at the same time."}),$("button",{class:"btn primary wbig",onclick:dynExit,text:"Done"}));
+  }
+  else if(s.t==="rintro") card.push($("div",{class:"chap-emoji",text:"🔁"}),$("h2",{class:"wq",style:"text-align:center",text:"Check-in"}),$("p",{class:"wp",style:"text-align:center",text:"Five quick questions about how it's going. Answer honestly. You'll see each other's answers on your agreement."}),nav(()=>dynGo(1),"Let's go"));
+  else if(s.t==="rdone") card.push($("div",{class:"chap-emoji",text:"💛"}),$("h2",{class:"wq",style:"text-align:center",text:"Thank you for checking in"}),$("button",{class:"btn primary wbig",onclick:dynExit,text:"Done"}));
+  return [header(), top, $("div",{class:"form wcard"},...card.filter(Boolean))];
+}
+let agreementOpen=false;
+function dynCard(){
+  const P=nm(other(me)), mineN=dynMine().filter(q=>dGet(`${me}|${q.id}`)).length, total=dynMine().length;
+  if(!dynRevealed()){
+    return $("div",{class:"form dyn-card"},
+      $("div",{class:"eyebrow",text:"🤝 Our dynamic"}),
+      $("h3",{style:"font-size:20px",text: dynDone(me) ? "You're locked in" : "Set up your dynamic"}),
+      $("p",{class:"muted",style:"margin:0;font-size:14px",text: dynDone(me) ? "Your agreement shows up for both of you once you've both finished." : "How he leads, rules, consequences, praise, and aftercare. You each answer privately, then it comes together as one agreement."}),
+      $("div",{class:"row",style:"gap:8px"}, $("button",{class:"btn "+(dynDone(me)?"":"primary"),onclick:()=>dynStart("setup"),text: dynDone(me) ? "Edit my answers" : mineN ? `Pick up where you left off (${mineN} of ${total})` : "Start"})));
+  }
+  const lastRev=Math.max(dGet("a|_rev")||0, dGet("b|_rev")||0, Math.min(dGet("a|_done")||0, dGet("b|_done")||0)), dueRev = Date.now()-lastRev > DYN_REVIEW_DAYS*864e5;
+  const ans=(k,id)=>{ const a=dGet(`${k}|${id}`); return a ? a.t : null; };
+  const blk=(label,text)=>text?$("div",{class:"ag-a"},$("span",{class:"ag-who",text:label}),$("span",{text})):null;
+  const secs = DYN.map(s=>$("div",{class:"ag-sec"},$("h4",{text:`${s.e} ${s.t}`}),
+    ...s.q.map(([id,who,text])=>{
+      const parts = who==="both" ? [blk(nm("a"),ans("a",id)), blk(nm("b"),ans("b",id))] : [blk(nm(who==="brat"?bratKey():other(bratKey())), ans(who==="brat"?bratKey():other(bratKey()),id))];
+      if(!parts.some(Boolean)) return null;
+      return $("div",{class:"ag-q"},$("div",{class:"ag-qt",text}),...parts);
+    }).filter(Boolean)));
+  const rev = DYN_REVIEW.map(([id,text])=>{ const a=dGet(`a|rev|${id}`), b=dGet(`b|rev|${id}`); if(!a && !b) return null; return $("div",{class:"ag-q"},$("div",{class:"ag-qt",text}),a?blk(nm("a"),a.t):null,b?blk(nm("b"),b.t):null); }).filter(Boolean);
+  return $("div",{class:"form dyn-card"},
+    $("div",{class:"eyebrow",text:"🤝 Our dynamic"}),
+    $("h3",{style:"font-size:20px",text:"Our agreement"}),
+    dueRev ? $("div",{class:"now-row",style:"cursor:default"},$("span",{text:"🔁 Time for a check-in on how it's going"}),$("button",{class:"btn small primary",onclick:()=>dynStart("review"),text:"Check in"})) : null,
+    agreementOpen ? $("div",{class:"stack",style:"gap:14px"},...secs, rev.length?$("div",{class:"ag-sec"},$("h4",{text:"🔁 Latest check-in"}),...rev):null) : null,
+    $("div",{class:"row",style:"gap:8px;flex-wrap:wrap"},
+      $("button",{class:"btn small",onclick:()=>{ agreementOpen=!agreementOpen; render(); },text: agreementOpen?"Close":"Read our agreement"}),
+      $("button",{class:"btn small ghost",onclick:()=>dynStart("setup"),text:"Edit my answers"}),
+      dueRev ? null : $("button",{class:"btn small ghost",onclick:()=>dynStart("review"),text:"Check in now"})));
+}
+function checkDynReveal(){
+  if(!me || !dynRevealed() || lsGet("ftl_dyn_shown",false) || wiz!==null || dynStep!==null) return;
+  if(typeof room!=="undefined" && room && typeof synced!=="undefined" && !synced) return;
+  lsSet("ftl_dyn_shown",true);
+  showMoment("🤝","Our dynamic","You both finished",`Your agreement is ready. Find it on Boundaries and read it with ${nm(other(me))}.`,5000);
+}
+function viewBoundaries(){
+  if(dynStep!==null && me) return viewDynamic();
   if(wiz!==null && me) return viewWizard();
   const out=[header(),$("h2",{style:"font-size:26px",text:"Boundaries"})];
   if(!me){ out.push($("button",{class:"btn primary",onclick:askWho,text:"Tell us who you are to answer"})); return out; }
   const allI=allItems(), answeredN=allI.filter(([k])=>answer(me,k)).length;
+  out.push(dynCard());
   if(answeredN===allI.length) out.push($("button",{class:"btn small ghost",style:"align-self:flex-start",onclick:wizStart,text:"↻ Go through the walkthrough again"}));
   else out.push($("div",{class:"form wpromo"},
     $("h3",{style:"font-size:20px",text: answeredN===0 ? "Not sure where to start?" : answeredN<allI.length ? "Pick up where you left off" : "Want to go through it again?"}),
@@ -2036,6 +2183,7 @@ function viewHome(){
   const extras=[];
   { const owe=owedBy(me||"a"); if(owe.length) extras.push({t:`You owe ${partner}: ${owe[0].text}${owe.length>1?` (+${owe.length-1} more)`:""}`, go:()=>{ tab="rewards"; render(); window.scrollTo(0,0); }}); }
   if(me && irlOn()) extras.unshift({t:`🎁 Together deck is on through ${fmtDay(irlCfg().to)}`, go:()=>{ if(!me){askWho();return;} openGame("cards"); }});
+  if(me && dynRevealed() && !lsGet("ftl_dyn_opened",false)) extras.push({t:`🤝 Your agreement is ready`, go:()=>{ lsSet("ftl_dyn_opened",true); agreementOpen=true; tab="limits"; render(); window.scrollTo(0,0); }});
   if(me && revealed() && !lsGet("ftl_reveal_opened",false)) extras.push({t:`👀 The boundaries reveal is open`, go:()=>{ lsSet("ftl_reveal_opened",true); tab="limits"; render(); window.scrollTo(0,0); }});
   if(me && pushHereOn() && !pushOn(other(me)) && !lsGet("ftl_alert_nudged",false)) extras.push({t:`${partner}'s alerts are off. Text ${himHer(other(me))} to turn them on`, go:()=>{ lsSet("ftl_alert_nudged",true); location.href=alertNudgeLink(); render(); }});
   { const dq=dailyQ(ymd(new Date())); if(dq && me && !dailyAns(ymd(new Date()),me)) extras.push({t: dailyAns(ymd(new Date()),other(me)) ? `${partner} answered today's question` : "Today's question is waiting", go:()=>{ const el=document.querySelector(".daily"); if(el) el.scrollIntoView({behavior:"smooth",block:"center"}); }}); }
@@ -3217,7 +3365,7 @@ function render(){
   const v = tab==="rewards"?viewRewards():tab==="setup"?viewSetup():tab==="games"?viewGames():tab==="avatars"?viewAvatars():tab==="home"?viewHome():tab==="play"?viewPlay():tab==="memories"?viewMemories():tab==="limits"?viewBoundaries():viewSettings();
   app.append(...v.flat().filter(Boolean)); renderTabs();
   if(tab==="play"){ const acts=[...app.querySelectorAll(":scope > .actions")]; if(acts.length){ const bar=$("div",{class:"playbar"}); acts.forEach(a=>bar.append(a)); app.append(bar); } app.append(gamesLink()); }
-  checkLevelUp(); checkIrl(); checkBoundsReveal(); checkAvatarNews(); checkDailyNews(); checkGameNews(); checkRewardNews(); checkJarMilestone();
+  checkLevelUp(); checkIrl(); checkBoundsReveal(); checkDynReveal(); checkAvatarNews(); checkDailyNews(); checkGameNews(); checkRewardNews(); checkJarMilestone();
 }
 loadLocal(); render(); connect(); goFromHash();
 </script>
