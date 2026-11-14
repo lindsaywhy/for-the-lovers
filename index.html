@@ -26,7 +26,7 @@
   --rose:#f4a6bf;
   --amber:#f9cdd8;
   --deep:#0a1711;
-  --d-know:#8fc4d9; --d-sweet:#f9cdd8; --d-flirty:#f4a6bf; --d-date:#9fd8a8; --d-dark:#e0609a; --d-wild:#e8d9b0; --d-brat:#ff6fae; --d-deep:#b9a7e8; --d-yesno:#ffb38a; --d-yessir:#7fd6c2; --d-music:#f2c27b;
+  --d-know:#8fc4d9; --d-sweet:#f9cdd8; --d-flirty:#f4a6bf; --d-date:#9fd8a8; --d-dark:#e0609a; --d-wild:#e8d9b0; --d-brat:#ff6fae; --d-deep:#b9a7e8; --d-yesno:#ffb38a; --d-yessir:#7fd6c2; --d-music:#f2c27b; --d-irl:#ffd36e;
   --display:"Gloock", Georgia, "Times New Roman", serif;
   --body:"Outfit", system-ui, -apple-system, "Segoe UI", sans-serif;
   color-scheme:dark;
@@ -127,6 +127,7 @@ a.btn{color:inherit;text-decoration:none;display:inline-flex;align-items:center;
 @keyframes chapIn{from{transform:scale(.5) rotate(-10deg);opacity:0}to{transform:none;opacity:1}}
 .reveal-card{border-color:var(--rose)}
 .reveal-card.locked{border-style:dashed}
+.irl-card{border-color:var(--d-irl);background:linear-gradient(160deg,#ffd36e14,transparent 60%),var(--bg2)}
 .alert-ask{display:flex;align-items:center;gap:8px;padding:10px 12px;border-radius:16px;border:1px dashed var(--rose);background:#f4a6bf0d}
 .al-row{display:flex;gap:10px;align-items:flex-start}
 .al-dot{width:10px;height:10px;border-radius:50%;margin-top:6px;flex:none;background:#ffffff33;box-shadow:0 0 0 3px #ffffff10}
@@ -425,7 +426,8 @@ const DECKS = {
   yesno: {name:"Be Honest", color:"var(--d-yesno)"},
   yessir:{name:"Yes Sir", color:"var(--d-yessir)"},
   jyesno:{name:"Be Honest", color:"var(--d-yesno)"},
-  music: {name:"Soundtrack", color:"var(--d-music)"}
+  music: {name:"Soundtrack", color:"var(--d-music)"},
+  irl:   {name:"Together", color:"var(--d-irl)"}
 };
 /* Every card: t = text, g = boundary topics, r = who draws it ("brat" = Her, "tamer" = Him), lvl = earliest heat stage.
    {you} = the other person, {brat} = Her, {tamer} = Him. Ask decks are questions for the other person; the rest are for whoever drew. */
@@ -439,7 +441,7 @@ const LV_CARD = {
   "deep-15":[1,2],"deep-16":[1,2],"deep-17":[1,2],"deep-20":[1,2],"deep-22":[1,2],
   "wild-5":[2,3],"wild-6":[2,3],"wild-7":[2,3],
   "date-8":[1],"sweet-14":[1]};
-function lvOf(deck, i, x){ const id=deck+"-"+i; if(LV_CARD[id]) return LV_CARD[id]; if(x && x.lvl) return [x.lvl]; return LV_DECK[deck] || [0,1,2,3]; }
+function lvOf(deck, i, x){ const id=deck+"-"+i; if(x && x.lv) return x.lv; if(LV_CARD[id]) return LV_CARD[id]; if(x && x.lvl) return [x.lvl]; return LV_DECK[deck] || [0,1,2,3]; }
 const CARDS = {
 know:[
  {t:"What's the one food you'd eat every day if nobody was watching?"},
@@ -632,6 +634,8 @@ CARDS.deep = [{"t": "What happened while we weren't talking that you wish I was 
 CARDS.yesno = [{"t": "Real question… do you think about me in the shower?", "r": "brat", "lvl": 1, "g": []}, {"t": "You ever replay one of our nights in your head while you're at work?", "r": "brat", "lvl": 1, "g": []}, {"t": "Do you like it when I'm the one who starts it?", "r": "brat", "lvl": 1, "g": []}, {"t": "What happens to you when I talk slow and low like this?", "r": "brat", "lvl": 1, "g": []}, {"t": "You ever had a dream about me you never told me about?", "r": "brat", "lvl": 1, "g": []}, {"t": "Be honest… you like it when I wear your clothes?", "r": "brat", "lvl": 1, "g": []}, {"t": "Is there an outfit of mine you secretly want me to wear more?", "r": "brat", "lvl": 1, "g": []}, {"t": "Be honest… do you like it when I take over a little?", "r": "brat", "lvl": 2, "g": ["control"]}, {"t": "You like it when I'm being a brat and you gotta put me in my place?", "r": "brat", "lvl": 2, "g": ["brat"]}, {"t": "Do you want me to just tell you what I want, out loud?", "r": "brat", "lvl": 2, "g": ["talk"]}, {"t": "You like being teased till you can't take it no more?", "r": "brat", "lvl": 2, "g": []}, {"t": "Have you ever thought about role play with me?", "r": "brat", "lvl": 2, "g": ["fantasy"]}, {"t": "Do you like it when I get loud?", "r": "brat", "lvl": 2, "g": ["talk"]}, {"t": "Would you let me blindfold you?", "r": "brat", "lvl": 2, "g": ["control"]}, {"t": "Tell the truth… you like it when I boss you around a little?", "r": "brat", "lvl": 2, "g": ["control"]}, {"t": "What does it do to you when I say your name in the moment?", "r": "brat", "lvl": 2, "g": ["talk"]}, {"t": "If I sent you a pic out of nowhere, would you want that?", "r": "brat", "lvl": 2, "g": ["photos"]}, {"t": "Do you like your hair getting pulled?", "r": "brat", "lvl": 3, "g": ["rough"]}, {"t": "What about pulling mine?", "r": "brat", "lvl": 3, "g": ["rough"]}, {"t": "Okay… spanking. You want to give it, get it, or both?", "r": "brat", "lvl": 3, "g": ["rough"]}, {"t": "Okay, random question… have you ever thought about being tied up?", "r": "brat", "lvl": 3, "g": ["rough", "control"]}, {"t": "Would you want to tie me up?", "r": "brat", "lvl": 3, "g": ["rough", "control"]}, {"t": "You like it when I'm on top?", "r": "brat", "lvl": 3, "g": []}, {"t": "Have you ever tried edging? Stopping right before and starting over?", "r": "brat", "lvl": 3, "g": ["control"]}, {"t": "Would you be down to try a toy together?", "r": "brat", "lvl": 3, "g": ["toys"]}, {"t": "Is there something you've wanted to try with me but never asked?", "r": "brat", "lvl": 3, "g": ["fantasy"]}, {"t": "You like it when I tell you what I'm doing to myself while we're on the phone?", "r": "brat", "lvl": 3, "g": ["self", "talk"]}, {"t": "How would you feel about me waking you up in a freaky way?", "r": "brat", "lvl": 3, "g": []}, {"t": "Is there a spot on your body nobody ever gave enough attention to?", "r": "brat", "lvl": 3, "g": ["talk"]}, {"t": "If I said “tonight, anything you want,” you already know what you'd pick?", "r": "brat", "lvl": 3, "g": ["fantasy"]}];
 CARDS.yessir = [{"t": "You like it when I listen to you, huh?", "r": "brat", "lvl": 1, "g": []}, {"t": "Do you like being the one who decides what we do?", "r": "brat", "lvl": 1, "g": []}, {"t": "What does it do to you when I say “yes sir,” even playing?", "r": "brat", "lvl": 1, "g": []}, {"t": "You like it when I get a little mouthy with you?", "r": "brat", "lvl": 1, "g": []}, {"t": "Can you tell when I'm trying to get a reaction out of you?", "r": "brat", "lvl": 1, "g": []}, {"t": "You like being the one I come to when I need something?", "r": "brat", "lvl": 1, "g": []}, {"t": "Be honest… you like it when I'm a brat on purpose?", "r": "brat", "lvl": 2, "g": []}, {"t": "Would you want to be the one who puts me in my place?", "r": "brat", "lvl": 2, "g": []}, {"t": "How does it feel when I ask you for permission?", "r": "brat", "lvl": 2, "g": ["control"]}, {"t": "Tell the truth… you like knowing you can get me to behave, don't you?", "r": "brat", "lvl": 2, "g": []}, {"t": "If you gave me one rule for tonight, what would it be?", "r": "brat", "lvl": 2, "g": ["control"]}, {"t": "And if I break it… what happens?", "r": "brat", "lvl": 2, "g": ["control"]}, {"t": "Would you want to tell me exactly what to do, step by step?", "r": "brat", "lvl": 3, "g": ["control", "talk"]}, {"t": "What if I had to wait for your permission before I did anything?", "r": "brat", "lvl": 3, "g": ["control"]}, {"t": "What would you do if I started begging?", "r": "brat", "lvl": 3, "g": ["control"]}, {"t": "What would you want me to call you when you're in charge?", "r": "brat", "lvl": 3, "g": []}, {"t": "What if I wasn't allowed to talk until you said so?", "r": "brat", "lvl": 3, "g": ["control"]}, {"t": "Do you want to be the one who decides when I'm done?", "r": "brat", "lvl": 3, "g": ["control"]}, {"t": "Did you like being in charge tonight?", "r": "brat", "lvl": 3, "g": []}, {"t": "Want me to keep being a brat so you gotta keep taming me?", "r": "brat", "lvl": 3, "g": []}, {"t": "Should we make this our thing?", "r": "brat", "lvl": 3, "g": []}];
 
+/* Together: cards for when you're in the same room. Only in play during the visit (see irlOn). */
+CARDS.irl = [{"t": "Slow dance with {you} in the kitchen. One whole song, no phones.", "lv": [0, 1]}, {"t": "Sit facing {you}, knees touching. Hold eye contact for one full minute. No talking.", "lv": [0, 1]}, {"t": "Tell {you}, to their face, the thing you've been saying over the phone all year.", "lv": [0, 1]}, {"t": "Hold {you}'s face in your hands and tell them what you missed the most.", "lv": [0, 1]}, {"t": "Give {you} a five-minute hand or foot massage. Your choice which, their choice how hard.", "lv": [0]}, {"t": "Feed {you} the first bite of whatever you're eating tonight.", "lv": [0]}, {"t": "Lay on {you}'s chest for two songs. Just listen to their heartbeat.", "lv": [0, 1]}, {"t": "Phones face down for the next three cards. Whoever touches theirs first owes a kiss wherever the other one says.", "lv": [0, 1]}, {"t": "Kiss {you} like it's the airport and you haven't seen them in months.", "lv": [1, 2]}, {"t": "Whisper in {you}'s ear what you wanted to do the second you saw them.", "lv": [1, 2], "g": ["talk"]}, {"t": "Undo one thing on {you}'s outfit. Only one. Slowly.", "lv": [1]}, {"t": "Kiss {you}'s neck for one full minute. They're not allowed to touch you back.", "lv": [1, 2]}, {"r": "tamer", "t": "Pull {brat} onto your lap and tell her exactly how long you've been waiting for this.", "lv": [1, 2]}, {"r": "brat", "t": "Sit on {tamer}'s lap and tell him what you've been dreaming about at night.", "lv": [1, 2], "g": ["talk"]}, {"t": "Trace every spot you missed on {you} with your fingertips. Name each one out loud.", "lv": [1]}, {"t": "Ask {you} for one thing they want before the 12th. Then promise it.", "lv": [1]}, {"r": "tamer", "t": "Tell {brat} the detail about her you thought about most while you were away. Be specific.", "lv": [1]}, {"r": "tamer", "t": "Take {brat}'s clothes off one piece at a time. Tell her what you're going to do to every spot you uncover.", "lv": [2, 3], "g": ["talk"]}, {"r": "tamer", "t": "Tell {brat} exactly how rough you're going to be tonight. Then ask her how she wants it.", "lv": [2, 3], "g": ["rough"]}, {"r": "tamer", "t": "Pin {brat}'s wrists over her head and kiss her until she says please.", "lv": [2, 3], "g": ["tied", "beg"]}, {"r": "brat", "t": "Thank {tamer} properly for coming all this way. Your mouth, your way.", "lv": [2, 3], "g": ["oral"]}, {"r": "brat", "t": "Tell {tamer} exactly what he did right on the last card. Then show him how much you appreciated it.", "lv": [2, 3], "g": ["praise"]}, {"t": "Blindfold {you}. Touch them anywhere you want for two minutes. They have to guess what's next.", "lv": [2, 3], "g": ["control"]}, {"t": "Undress {you} without using your hands.", "lv": [2]}, {"t": "Shower together. {you} washes you, slow, and doesn't skip a spot.", "lv": [2, 3]}, {"r": "tamer", "t": "Pull {brat}'s hair back, gently, and tell her what a good girl she's been all year waiting for you.", "lv": [2, 3], "g": ["hair", "praise"]}, {"r": "brat", "t": "Get on your knees, look up at {tamer}, and ask him what he wants.", "lv": [2, 3], "g": ["control"]}, {"t": "Full-body oil massage for {you}. It turns into whatever it turns into.", "lv": [2]}, {"r": "tamer", "t": "She's yours tonight. Tell {brat} every single thing you're about to do to her, in order. Then do it. Don't skip a detail.", "lv": [3], "g": ["talk", "control"]}, {"r": "tamer", "t": "Hold {brat} down and make her wait. She doesn't get it until she asks nicely, twice.", "lv": [3], "g": ["tied", "denial", "beg"]}, {"r": "tamer", "t": "Spank {brat} wherever you like, as many as you like. Check in with her after every five.", "lv": [3], "g": ["spank"]}, {"r": "tamer", "t": "Rough, then slow. You decide when it switches, and she doesn't get to know when.", "lv": [3], "g": ["rough"]}, {"r": "tamer", "t": "Take your time with {brat}. Find out exactly how she likes it, and don't stop until she tells you it's perfect.", "lv": [3], "g": ["oral"]}, {"r": "brat", "t": "Thank {tamer}... orally. Take your time. He earned it.", "lv": [3], "g": ["oral"]}, {"r": "brat", "t": "Tell {tamer} exactly what you want him to do to you. Then let him take over completely.", "lv": [3], "g": ["control", "talk"]}, {"r": "brat", "t": "Push one of {tamer}'s buttons on purpose. Then take whatever he decides you've earned.", "lv": [3], "g": ["brat"]}, {"t": "Edge {you} until they beg. Then decide if they've earned it.", "lv": [3], "g": ["denial", "beg"]}, {"t": "In front of the mirror. Watch each other the whole time.", "lv": [3]}, {"t": "The toy you've been using over the phone? Tonight {you} is the one holding it.", "lv": [3], "g": ["toys"]}, {"t": "Leave a mark somewhere only {you} will see until the next visit.", "lv": [3], "g": ["rough"]}, {"t": "Do the card you skipped the most this year. In person this time.", "lv": [3]}, {"t": "After: hold {you} for ten minutes and tell them three things you loved about tonight.", "lv": [2, 3], "g": ["praise"]}];
 /* More cards (added with the content refresh). Appended so existing card ids never change. */
 CARDS.know.push(...[{"t": "What's something you're lowkey really good at?"}, {"t": "What's the best advice anybody ever gave you?"}, {"t": "What's the most you ever laughed in your life?"}, {"t": "What's your go-to order at a restaurant?"}, {"t": "What would your dream job be if money didn't matter?"}, {"t": "What's one thing on your bucket list?"}, {"t": "What's a skill you wish you learned sooner?"}, {"t": "What's your comfort show?"}, {"t": "Who do you call first when something good happens?"}, {"t": "What smell takes you right back home?"}, {"t": "What's the hardest thing you ever did?"}, {"t": "Morning person or night owl, for real?"}, {"t": "What's your favorite way to spend a Friday night now?"}, {"t": "What's a small thing that ruins your whole day?"}, {"t": "What's your most used emoji with me?"}, {"t": "What would you do with a free hour every day?"}, {"t": "What's one thing you'd teach our kids someday?"}, {"t": "What city would you live in if you could pick anywhere?"}, {"t": "What's your favorite thing to cook?"}, {"t": "What's the best gift you ever got?"}]);
 CARDS.sweet.push(...[{"t": "Tell {you} one thing about them that makes you proud to be theirs."}, {"t": "Tell {you} what you'd do on your first morning back together."}, {"t": "Tell {you} the first thing you noticed about them, and the thing you noticed later that made you stay."}, {"t": "Tell {you} one thing you've learned from them."}, {"t": "Read {you} a text they sent you that you saved."}, {"t": "Tell {you} how they make your hard days easier."}, {"t": "Tell {you} what you'd write on a card if it was their birthday today."}, {"t": "Tell {you} three words that describe how they make you feel."}, {"t": "Tell {you} a dream you have for the two of you, ten years out."}, {"t": "Tell {you} what you'd never want them to stop doing."}, {"t": "Tell {you} what you think about when you hear their name."}, {"t": "Tell {you} what you love about their laugh."}, {"t": "Tell {you} the smallest thing they ever did that meant the most."}, {"t": "Tell {you} a promise you're making them tonight."}, {"t": "Tell {you} the moment you knew this time was different."}, {"t": "Tell {you} one thing you'd plan for them if you had a whole day."}, {"t": "Tell {you} what you'd want them to know if they ever doubted you."}, {"t": "Tell {you} which part of your day feels empty without them."}]);
@@ -704,7 +708,7 @@ const HEAT = [
   {name:"No Skips",         sub:"Grown and spicy",        w:{flirty:10,dark:40,yesno:14,jyesno:14,yessir:10,brat:14,wild:2}}
 ];
 const DEFAULTS = {
-  settings:{names:{a:"Her",b:"Him"}, custom:[], banned:[], brat:"a", safeword:"", paused:["brat"], pace:[3,3,3]},
+  settings:{names:{a:"Her",b:"Him"}, custom:[], banned:[], brat:"a", safeword:"", paused:["brat"], pace:[3,3,3], irl:{from:"2026-12-08", to:"2026-12-12", on:true}},
   live:{card:null, by:null, n:0, night:"", history:[], reveal:null, cool:"", swNight:"", ys:0},
   nights:{dates:[]},
   memories:{items:[]},
@@ -972,6 +976,34 @@ function pron(t, who){
 function fill(t, drawer){ drawer=drawer||me||"a"; if(t.includes("{you}")) t=pron(t, other(drawer)); return t.replace(/\{brat\}/g,nm(bratKey())).replace(/\{tamer\}/g,nm(other(bratKey()))).replace(/\{you\}/g,nm(other(drawer))).replace(/^(.)/,c=>c.toUpperCase()); }
 function ysTonight(){ return S.live.night===ymd(new Date()) ? (S.live.ys||0) : 0; }
 function cooled(){ return S.live.cool===ymd(new Date()); }
+/* ---------- Together deck: turns itself on for the visit ---------- */
+function irlCfg(){ return Object.assign({from:"2026-12-08", to:"2026-12-12", on:true}, S.settings.irl||{}); }
+function irlOn(){ const c=irlCfg(), d=ymd(new Date()); return !!c.on && d>=c.from && d<=c.to; }
+const IRL_W = [45,50,55,60];
+/* cards that only make sense over the phone sit out while you're together */
+const PHONE_ONLY = /\b(send|sext|text|texting|voice note|call|hang up|on the phone|phone|pic|selfie|photo|video|mail|lockscreen|wallpaper|story|playlist|on read|order .* to (the|their) door|while you're still on)\b/i;
+const fmtDay = d => new Date(d+"T12:00:00").toLocaleDateString(undefined,{month:"short",day:"numeric"});
+let irlPreview=false;
+function irlCard(){
+  const c=irlCfg(), P=nm(other(me||"a")), on=irlOn();
+  const setC=patch=>{ S.settings=Object.assign({},S.settings,{irl:Object.assign({},irlCfg(),patch)}); save("settings"); render(); };
+  const from=$("input",{type:"date",id:"irlFrom",value:c.from}), to=$("input",{type:"date",id:"irlTo",value:c.to});
+  from.addEventListener("change",()=>{ if(from.value) setC({from:from.value, to: to.value<from.value?from.value:to.value}); });
+  to.addEventListener("change",()=>{ if(to.value) setC({to: to.value<from.value?from.value:to.value}); });
+  return $("div",{class:"form irl-card"},
+    $("div",{class:"row",style:"justify-content:space-between;align-items:center"},$("h3",{style:"font-size:20px",text:"🎁 Surprise: Together deck"}),
+      $("button",{class:"switch",role:"switch","aria-checked":String(!!c.on),"aria-label":"Together deck "+(c.on?"on":"off"),onclick:()=>setC({on:!c.on})})),
+    $("p",{class:"muted",style:"margin:0;font-size:13px",text: on ? `It's on right now, through ${fmtDay(c.to)}. Pillow Talk is mostly Together cards, and phone-only cards sit out.` : c.on ? `${P} can't see this. It turns on by itself on ${fmtDay(c.from)} and off after ${fmtDay(c.to)}. Cards made for when you're in the same room.` : "Off. Turn it back on to have it start by itself."}),
+    $("div",{class:"two"},$("div",{class:"field"},$("label",{for:"irlFrom",text:"Starts"}),from),$("div",{class:"field"},$("label",{for:"irlTo",text:"Ends"}),to)),
+    $("button",{class:"btn small ghost",style:"align-self:flex-start",onclick:()=>{ irlPreview=!irlPreview; render(); },text: irlPreview?"Hide the cards":`Peek at the ${CARDS.irl.length} cards`}),
+    irlPreview ? $("div",{class:"customlist"},...allCards("irl").map(x=>$("div",{},$("span",{},$("span",{class:"muted",text:`${LEVEL_EMOJI[x.lv[0]]} ${x.role==="tamer"?P+": ":x.role==="brat"?"You: ":""}`}),fill(x.text, x.role==="tamer"?other(bratKey()):x.role==="brat"?bratKey():me))))) : null);
+}
+function checkIrl(){
+  if(!me || !irlOn() || wiz!==null) return;
+  if(typeof room!=="undefined" && room && typeof synced!=="undefined" && !synced) return;
+  const key="ftl_irl_seen_"+irlCfg().from; if(lsGet(key,false)) return; lsSet(key,true);
+  showMoment("🎁","Surprise","The Together deck is on",`Cards made for the same room, through ${fmtDay(irlCfg().to)}. Read it, then put the phone down 😏`,8000);
+}
 function pickCard(n, excludeId, drawer, sameDeck){
   drawer = drawer || me || "a";
   const role = drawer===bratKey() ? "brat" : "tamer";
@@ -979,8 +1011,10 @@ function pickCard(n, excludeId, drawer, sameDeck){
   const hi = cooled() ? 0 : HEAT.indexOf(heatFor(Math.max(1,n)));
   /* Tamer cards wait until Him has answered two Yes Sir questions tonight, so he's eased in first. */
   const tamerOpen = ysTonight() >= 2;
-  const usable = k => playable(k).filter(c=>(!c.role || c.role===role) && fits(c.m) && c.lv.includes(hi) && !(c.deck==="brat" && c.role==="tamer" && !tamerOpen));
+  const together = irlOn();
+  const usable = k => playable(k).filter(c=>(!c.role || c.role===role) && fits(c.m) && c.lv.includes(hi) && !(c.deck==="brat" && c.role==="tamer" && !tamerOpen) && (together ? !(c.deck!=="irl" && PHONE_ONLY.test(c.text)) : c.deck!=="irl"));
   const w = Object.assign({}, cooled() ? {know:40,sweet:40,date:20} : heatFor(n).w);
+  if(together){ const scale=0.5; for(const k of Object.keys(w)) w[k]=w[k]*scale; w.irl = cooled() ? 30 : IRL_W[hi]; }
   const paused = S.settings.paused||[];
   for(const k of Object.keys(w)) if(paused.includes(k) || !usable(k).length) w[k]=0;
   let total = Object.values(w).reduce((a,b)=>a+b,0);
@@ -1624,7 +1658,7 @@ function decksBox(){
   const st=S.settings;
   return $("div",{class:"form"},$("h3",{style:"font-size:18px",text:"Card categories"}),
     $("p",{class:"muted",style:"margin:0;font-size:13px",text:"Turn off anything you're not in the mood for tonight."}),
-    ...Object.entries(DECKS).filter(([k])=>k!=="jyesno").map(([k,d])=>{
+    ...Object.entries(DECKS).filter(([k])=>k!=="jyesno" && (k!=="irl"||irlOn())).map(([k,d])=>{
       const on=!(st.paused||[]).includes(k);
       const set=()=>{ const keys = k==="yesno" ? ["yesno","jyesno"] : [k]; let pz=(S.settings.paused||[]).filter(x=>!keys.includes(x)); if(on) pz=pz.concat(keys); S.settings=Object.assign({},S.settings,{paused:pz}); save("settings"); render(); };
       return $("div",{class:"srow"},$("div",{style:"min-width:0"},$("div",{style:"font-weight:500",text:d.name}),$("div",{class:"muted",style:"font-size:13px",text:levelsFor(k).join(" · ")||"—"})),
@@ -1945,6 +1979,7 @@ function viewHome(){
   rows.sort((a,b)=>(b.hot?1:0)-(a.hot?1:0));
   const extras=[];
   { const owe=owedBy(me||"a"); if(owe.length) extras.push({t:`You owe ${partner}: ${owe[0].text}${owe.length>1?` (+${owe.length-1} more)`:""}`, go:()=>{ tab="rewards"; render(); window.scrollTo(0,0); }}); }
+  if(me && irlOn()) extras.unshift({t:`🎁 Together deck is on through ${fmtDay(irlCfg().to)}`, go:()=>{ if(!me){askWho();return;} openGame("cards"); }});
   if(me && revealed() && !lsGet("ftl_reveal_opened",false)) extras.push({t:`👀 The boundaries reveal is open`, go:()=>{ lsSet("ftl_reveal_opened",true); tab="limits"; render(); window.scrollTo(0,0); }});
   if(me && pushHereOn() && !pushOn(other(me)) && !lsGet("ftl_alert_nudged",false)) extras.push({t:`${partner}'s alerts are off. Text ${himHer(other(me))} to turn them on`, go:()=>{ lsSet("ftl_alert_nudged",true); location.href=alertNudgeLink(); render(); }});
   { const dq=dailyQ(ymd(new Date())); if(dq && me && !dailyAns(ymd(new Date()),me)) extras.push({t: dailyAns(ymd(new Date()),other(me)) ? `${partner} answered today's question` : "Today's question is waiting", go:()=>{ const el=document.querySelector(".daily"); if(el) el.scrollIntoView({behavior:"smooth",block:"center"}); }}); }
@@ -2155,7 +2190,7 @@ function paceBox(){
 function viewSettings(){
   const st=S.settings;
   const nameIn=k=>{ const i=$("input",{id:"name"+k,value:nm(k),maxlength:"24"}); i.addEventListener("change",()=>{ const n=Object.assign({},S.settings.names||{}); n[k]=i.value.trim()||(k==="a"?"Player one":"Player two"); S.settings=Object.assign({},S.settings,{names:n}); save("settings"); toast("Saved."); render(); }); return i; };
-  const deckSel=$("select",{id:"cdeck"},Object.entries(DECKS).filter(([k])=>k!=="jyesno").map(([k,d])=>$("option",{value:k,text:d.name})));
+  const deckSel=$("select",{id:"cdeck"},Object.entries(DECKS).filter(([k])=>k!=="jyesno" && (k!=="irl"||irlOn())).map(([k,d])=>$("option",{value:k,text:d.name})));
   const cText=$("textarea",{id:"ctext",placeholder:"An inside joke, a dare only you two get…",maxlength:"240"});
   const custom=st.custom||[], banned=st.banned||[];
   const cardName=id=>{ const d=id.startsWith("c-")?(custom.find(x=>x.id===id)||{}).deck:id.split("-")[0]; const c=d&&DECKS[d]?allCards(d).find(x=>x.id===id):null; return c?fill(c.text,me):"A card you removed"; };
@@ -2169,11 +2204,12 @@ function viewSettings(){
         $("div",{class:"seg tight",role:"group","aria-label":"This phone belongs to"},["a","b"].map(k=>$("button",{class:"seg-yes","aria-pressed":String(me===k),onclick:()=>{me=k;lsSet("ah_me",k);render();},text:nm(k)}))))),
     alertsCard(),
     codeCard(),
+    me===bratKey() ? irlCard() : null,
     fold("pace","Game pace","How many Pillow Talk cards each level lasts",paceBox()),
-    fold("cats","Card categories",`${Object.keys(DECKS).filter(k=>k!=="jyesno" && !(st.paused||[]).includes(k)).length} of ${Object.keys(DECKS).length-1} on`,$("div",{class:"form"},
+    fold("cats","Card categories",`${Object.keys(DECKS).filter(k=>k!=="jyesno" && (k!=="irl"||irlOn()) && !(st.paused||[]).includes(k)).length} of ${Object.keys(DECKS).filter(k=>k!=="jyesno" && (k!=="irl"||irlOn())).length} on`,$("div",{class:"form"},
       $("h3",{style:"font-size:20px",text:"Card categories"}),
       $("p",{class:"muted",style:"margin:0;font-size:13px",text:"Turn a category off and its cards stop coming up until you turn it back on."}),
-      ...Object.entries(DECKS).filter(([k])=>k!=="jyesno").map(([k,d])=>{
+      ...Object.entries(DECKS).filter(([k])=>k!=="jyesno" && (k!=="irl" || irlOn())).map(([k,d])=>{
         const on=!(st.paused||[]).includes(k);
         const set=()=>{ const keys = k==="yesno" ? ["yesno","jyesno"] : [k]; let pz=(S.settings.paused||[]).filter(x=>!keys.includes(x)); if(on) pz=pz.concat(keys); S.settings=Object.assign({},S.settings,{paused:pz}); save("settings"); render(); };
         return $("div",{class:"srow"},
@@ -3125,7 +3161,7 @@ function render(){
   const v = tab==="rewards"?viewRewards():tab==="setup"?viewSetup():tab==="games"?viewGames():tab==="avatars"?viewAvatars():tab==="home"?viewHome():tab==="play"?viewPlay():tab==="memories"?viewMemories():tab==="limits"?viewBoundaries():viewSettings();
   app.append(...v.flat().filter(Boolean)); renderTabs();
   if(tab==="play"){ const acts=[...app.querySelectorAll(":scope > .actions")]; if(acts.length){ const bar=$("div",{class:"playbar"}); acts.forEach(a=>bar.append(a)); app.append(bar); } app.append(gamesLink()); }
-  checkLevelUp(); checkBoundsReveal(); checkAvatarNews(); checkDailyNews(); checkGameNews(); checkRewardNews(); checkJarMilestone();
+  checkLevelUp(); checkIrl(); checkBoundsReveal(); checkAvatarNews(); checkDailyNews(); checkGameNews(); checkRewardNews(); checkJarMilestone();
 }
 loadLocal(); render(); connect(); goFromHash();
 </script>
