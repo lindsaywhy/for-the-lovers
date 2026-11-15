@@ -26,7 +26,7 @@
   --rose:#f4a6bf;
   --amber:#f9cdd8;
   --deep:#0a1711;
-  --d-know:#8fc4d9; --d-sweet:#f9cdd8; --d-flirty:#f4a6bf; --d-date:#9fd8a8; --d-dark:#e0609a; --d-wild:#e8d9b0; --d-brat:#ff6fae; --d-deep:#b9a7e8; --d-yesno:#ffb38a; --d-yessir:#7fd6c2; --d-music:#f2c27b; --d-irl:#ffd36e;
+  --d-know:#8fc4d9; --d-sweet:#f9cdd8; --d-flirty:#f4a6bf; --d-date:#9fd8a8; --d-dark:#e0609a; --d-wild:#e8d9b0; --d-brat:#ff6fae; --d-deep:#b9a7e8; --d-yesno:#ffb38a; --d-yessir:#7fd6c2; --d-music:#f2c27b; --d-irl:#ffd36e; --d-care:#b9e4d0;
   --display:"Gloock", Georgia, "Times New Roman", serif;
   --body:"Outfit", system-ui, -apple-system, "Segoe UI", sans-serif;
   color-scheme:dark;
@@ -147,6 +147,9 @@ a.btn{color:inherit;text-decoration:none;display:inline-flex;align-items:center;
 .ag-a{display:flex;gap:8px;font-size:15px;line-height:1.4}
 .ag-who{flex:none;font-weight:600;color:var(--rose)}
 #dynIn{min-height:110px}
+.care-link{position:relative;z-index:1;align-self:flex-start;background:none;border:0;padding:4px 0;color:inherit;opacity:.8;text-decoration:underline;font:inherit;font-size:14px;cursor:pointer}
+.care-guide .cg-sec h4{margin:0 0 4px;font-family:var(--display);font-size:17px;font-weight:400}
+.care-guide .cg-sec p{margin:0;font-size:15px;line-height:1.5}
 .alert-ask{display:flex;align-items:center;gap:8px;padding:10px 12px;border-radius:16px;border:1px dashed var(--rose);background:#f4a6bf0d}
 .al-row{display:flex;gap:10px;align-items:flex-start}
 .al-dot{width:10px;height:10px;border-radius:50%;margin-top:6px;flex:none;background:#ffffff33;box-shadow:0 0 0 3px #ffffff10}
@@ -446,7 +449,8 @@ const DECKS = {
   yessir:{name:"Yes Sir", color:"var(--d-yessir)"},
   jyesno:{name:"Be Honest", color:"var(--d-yesno)"},
   music: {name:"Soundtrack", color:"var(--d-music)"},
-  irl:   {name:"Together", color:"var(--d-irl)"}
+  irl:   {name:"Together", color:"var(--d-irl)"},
+  care:  {name:"Aftercare", color:"var(--d-care)"}
 };
 /* Every card: t = text, g = boundary topics, r = who draws it ("brat" = Her, "tamer" = Him), lvl = earliest heat stage.
    {you} = the other person, {brat} = Her, {tamer} = Him. Ask decks are questions for the other person; the rest are for whoever drew. */
@@ -1094,7 +1098,7 @@ function pickCard(n, excludeId, drawer, sameDeck){
   let pool = usable(deck).filter(c=>!recent.has(c.id)); if(!pool.length) pool = usable(deck);
   if(!pool.length) pool = allCards("sweet");
   const c = pool[Math.floor(Math.random()*pool.length)];
-  return {id:c.id, deck:c.deck, kind:c.kind, text:fill(c.text, drawer), checkIn:needsCheckIn(c)};
+  return {id:c.id, deck:c.deck, kind:c.kind, text:fill(c.text, drawer), checkIn:needsCheckIn(c), tags:c.tags||[]};
 }
 async function draw(forWho){
   if(room){ await pull(); const c=S.live.card;
@@ -1106,17 +1110,20 @@ function drawNow(forWho){
   if(!me){ askWho(); return; }
   const who = typeof forWho==="string" ? forWho : me;
   const today = ymd(new Date()); const n = nightN()+1;
-  const card = pickCard(n, null, who);
   const fresh = S.live.night!==today;
+  /* aftercare comes up after two rough cards, or one card after a single rough one */
+  const due = !fresh && ((S.live.intenseN||0) >= CARE_EVERY || ((S.live.intenseN||0) >= 1 && (S.live.sinceIntense||0) >= 1));
+  const card = due ? careCard(who) : pickCard(n, null, who);
   const swNight = fresh ? "" : S.live.swNight;
   if((card.deck==="brat"||card.deck==="yessir") && swNight!==today) card.swCheck = true;
   const ys = (fresh ? 0 : (S.live.ys||0)) + (card.deck==="yessir" ? 1 : 0);
-  S.live = Object.assign({}, S.live, {card, by:who, n, night:today, ys, swNight: card.swCheck ? today : swNight, history:(S.live.history||[]).concat(card.id).slice(-60)});
+  S.live = Object.assign({}, S.live, {card, by:who, n, night:today, ys, swNight: card.swCheck ? today : swNight, history:(S.live.history||[]).concat(card.id).slice(-60),
+    intenseN: fresh ? 0 : (card.deck==="care" ? 0 : (S.live.intenseN||0)), sinceIntense: fresh || card.deck==="care" ? 0 : (S.live.sinceIntense||0), roughNight: fresh ? "" : S.live.roughNight});
   logNight(); save("live"); render();
 }
 function skip(){
   if(!S.live.card) return;
-  const card = pickCard(nightN(), S.live.card.id, S.live.by, S.live.card.deck);
+  const card = S.live.card.deck==="care" ? careCard(S.live.by, S.live.card.id) : pickCard(nightN(), S.live.card.id, S.live.by, S.live.card.deck);
   const today = ymd(new Date());
   if((card.deck==="brat"||card.deck==="yessir") && (S.live.swNight!==today || S.live.card.swCheck)) card.swCheck = true;
   S.live = Object.assign({}, S.live, {card, ys:(S.live.ys||0)+(card.deck==="yessir"?1:0), swNight: card.swCheck ? today : S.live.swNight, history:(S.live.history||[]).concat(card.id).slice(-60)});
@@ -1132,7 +1139,8 @@ function markDone(){
   const c=S.live.card; if(!c || c.done) return;
   const today=ymd(new Date());
   /* Done hands the turn to your partner. Draw your next card when they're finished. */
-  S.live = Object.assign({}, S.live, {card:Object.assign({}, c, {done:true}), doneNight:today, doneCount:(S.live.doneNight===today?(S.live.doneCount||0):0)+1});
+  S.live = Object.assign({}, S.live, {card:Object.assign({}, c, {done:true}), doneNight:today, doneCount:(S.live.doneNight===today?(S.live.doneCount||0):0)+1},
+    isIntense(c) ? {intenseN:(S.live.intenseN||0)+1, sinceIntense:0, roughNight:today} : ((S.live.intenseN||0) ? {sinceIntense:(S.live.sinceIntense||0)+1} : {}), c.deck==="care" ? {caredNight:today} : {});
   save("live");
   notifyOther("cards", `Your turn, ${nm(other(me))}. ${nm(me)} is waiting on you 😏`, 30, {chk:{key:"live", field:"n", equals:S.live.n}, body:`Still your turn in Pillow Talk 😏`});
   award(S.live.by||me, HEARTS_PER_LEVEL[HEAT.indexOf(heatFor(Math.max(1,nightN())))]||1);
@@ -1401,7 +1409,7 @@ function viewBoundaries(){
   const out=[header(),$("h2",{style:"font-size:26px",text:"Boundaries"})];
   if(!me){ out.push($("button",{class:"btn primary",onclick:askWho,text:"Tell us who you are to answer"})); return out; }
   const allI=allItems(), answeredN=allI.filter(([k])=>answer(me,k)).length;
-  out.push(dynCard());
+  out.push(dynCard(), careGuide());
   if(answeredN===allI.length) out.push($("button",{class:"btn small ghost",style:"align-self:flex-start",onclick:wizStart,text:"↻ Go through the walkthrough again"}));
   else out.push($("div",{class:"form wpromo"},
     $("h3",{style:"font-size:20px",text: answeredN===0 ? "Not sure where to start?" : answeredN<allI.length ? "Pick up where you left off" : "Want to go through it again?"}),
@@ -1869,7 +1877,7 @@ function decksBox(){
   const st=S.settings;
   return $("div",{class:"form"},$("h3",{style:"font-size:18px",text:"Card categories"}),
     $("p",{class:"muted",style:"margin:0;font-size:13px",text:"Turn off anything you're not in the mood for tonight."}),
-    ...Object.entries(DECKS).filter(([k])=>k!=="jyesno" && (k!=="irl"||irlOn())).map(([k,d])=>{
+    ...Object.entries(DECKS).filter(([k])=>k!=="jyesno" && k!=="care" && (k!=="irl"||irlOn())).map(([k,d])=>{
       const on=!(st.paused||[]).includes(k);
       const set=()=>{ const keys = k==="yesno" ? ["yesno","jyesno"] : [k]; let pz=(S.settings.paused||[]).filter(x=>!keys.includes(x)); if(on) pz=pz.concat(keys); S.settings=Object.assign({},S.settings,{paused:pz}); save("settings"); render(); };
       return $("div",{class:"srow"},$("div",{style:"min-width:0"},$("div",{style:"font-weight:500",text:d.name}),$("div",{class:"muted",style:"font-size:13px",text:levelsFor(k).join(" · ")||"—"})),
@@ -1923,7 +1931,7 @@ function playEntry(){
   openChooser(open.length ? "open" : "change");
 }
 function endGame(id){
-  if(id==="cards"){ S.live=Object.assign({}, S.live, {ended:ymd(new Date())}); save("live"); }
+  if(id==="cards"){ const rough=S.live.roughNight===ymd(new Date()); S.live=Object.assign({}, S.live, {ended:ymd(new Date())}); save("live"); if(rough) setTimeout(careWindDown, 400); }
   else { lsSet("ftl_started_"+id,false); gSet(`open|${id}`, null); gSet(`closed|${id}`, {at:Date.now(), by:me}); }
   closeChooser(); toast(`${(PICKS.find(p=>p.id===id)||{}).name} ended. Hearts and answers stay.`); tab="home"; render(); window.scrollTo(0,0);
 }
@@ -2190,6 +2198,7 @@ function viewHome(){
   rows.sort((a,b)=>(b.hot?1:0)-(a.hot?1:0));
   const extras=[];
   { const owe=owedBy(me||"a"); if(owe.length) extras.push({t:`You owe ${partner}: ${owe[0].text}${owe.length>1?` (+${owe.length-1} more)`:""}`, go:()=>{ tab="rewards"; render(); window.scrollTo(0,0); }}); }
+  { const y=ymd(new Date(Date.now()-864e5)); if(me && S.live.roughNight===y && !lsGet("ftl_checkin_"+y,false)) extras.unshift({t:`🫶 Last night got rough. Check in on ${partner}`, go:()=>{ lsSet("ftl_checkin_"+y,true); showMoment("🫶","Next-day check-in",`Ask ${partner}`,`“How you feeling about last night? Anything you loved? Anything you'd change?”`,8000); render(); }}); }
   if(me && irlOn()) extras.unshift({t:`🎁 Together deck is on through ${fmtDay(irlCfg().to)}`, go:()=>{ if(!me){askWho();return;} openGame("cards"); }});
   if(me && dynRevealed() && !lsGet("ftl_dyn_opened",false)) extras.push({t:`🤝 Your agreement is ready`, go:()=>{ lsSet("ftl_dyn_opened",true); agreementOpen=true; tab="limits"; render(); window.scrollTo(0,0); }});
   if(me && revealed() && !lsGet("ftl_reveal_opened",false)) extras.push({t:`👀 The boundaries reveal is open`, go:()=>{ lsSet("ftl_reveal_opened",true); tab="limits"; render(); window.scrollTo(0,0); }});
@@ -2235,6 +2244,41 @@ function viewHome(){
   ];
 }
 /* ---------- our jar ---------- */
+/* ---------- aftercare: after the rough stuff, the game slows you down on purpose ----------
+   Two intense cards done (rough, spanking, whips, hair, tying up, spit, name-calling, attitude cards) and the next card is aftercare.
+   Ending a night that got rough shows a short wind-down, and the next day Home reminds you to check in. */
+const CARE = [{"t": "That got intense. Pause. Ask {you}, “How you feeling right now?” Then actually listen."}, {"t": "Go get some water. Both of you. Right now, then come back."}, {"t": "Switch your voice soft. Tell {you} “I got you.” Mean it."}, {"t": "Ask {you} what would help right now: holding, talking, quiet, or just a minute."}, {"t": "Tell {you} one thing they did tonight that you loved."}, {"t": "Breathe together for one minute. Slow. Nobody talks."}, {"t": "Ask {you}: was anything too much? No defending. Just listen."}, {"r": "tamer", "t": "Tell {brat} she did so good. Be specific about what."}, {"r": "tamer", "t": "Tell {brat} exactly how you'd be holding her right now if you were there.", "m": "phone"}, {"r": "tamer", "t": "Pull {brat} in close and hold her. Rub the spots you were rough with.", "m": "irl"}, {"r": "tamer", "t": "Ask {brat} what made her feel safe tonight, so you can do it again."}, {"r": "brat", "t": "Check on {tamer}. Ask him how he's feeling after running things tonight."}, {"r": "brat", "t": "Thank {tamer} for taking care of you tonight. Tell him what made you feel safe."}, {"r": "brat", "t": "Tell {tamer} he did good. He needs to hear it too."}, {"t": "Don't hang up yet. Stay on the phone a few more minutes, even if it's quiet.", "m": "phone"}, {"t": "Talk about something light for a minute. Laugh a little. Come back down together.", "m": "phone"}, {"t": "Grab a blanket and get under it together.", "m": "irl"}, {"t": "Shower together, slow, no sex. Just take care of each other.", "m": "irl"}];
+const INTENSE = new Set(["rough","spank","whip","tied","hair","spit","names","brat"]);
+const isIntense = c => !!c && c.deck!=="care" && c.kind!=="ask" && (c.tags||[]).some(t=>INTENSE.has(t));
+const CARE_EVERY = 2;
+function careCard(who, notId){
+  const role = who===bratKey() ? "brat" : "tamer", together = irlOn(), seen=new Set((S.live.history||[]).slice(-12));
+  let pool = CARE.map((x,i)=>Object.assign({id:"care-"+i, deck:"care", text:fill(x.t, who), kind:"do", role:x.r, m:x.m, lv:[0,1,2,3], tags:[]}))
+    .filter(c=>(!c.role || c.role===role) && (!c.m || (c.m==="irl")===together) && c.id!==notId);
+  const fresh = pool.filter(c=>!seen.has(c.id)); if(fresh.length) pool=fresh;
+  return Object.assign({}, pool[Math.floor(Math.random()*pool.length)]);
+}
+let careGuideOpen=false;
+function openCareGuide(){ careGuideOpen=true; tab="limits"; render(); setTimeout(()=>{ const el=document.querySelector(".care-guide"); if(el) el.scrollIntoView({behavior:"smooth",block:"start"}); },60); }
+function careGuide(){
+  const P=nm(other(me||"a")), sec=(t,...lines)=>$("div",{class:"cg-sec"},$("h4",{text:t}),...lines.map(l=>$("p",{text:l})));
+  const d=$("details",{class:"form fold care-guide",open:careGuideOpen},
+    $("summary",{},$("span",{class:"stack",style:"gap:2px"},$("span",{class:"fold-t",text:"🫶 Aftercare 101"}),$("span",{class:"muted",style:"font-size:13px",text:"What it is, why it matters after the rough stuff, and how to do it"}))),
+    $("div",{class:"fold-body"},
+      sec("What it is","Aftercare is how you take care of each other after things get rough or intense. It's not extra. It's part of it, same as the safeword."),
+      sec("Why it matters","Rough play floods you both with adrenaline. When it wears off, either of you can crash a little: shaky, tired, quiet, emotional, even sad or insecure. Sometimes it hits the next day. That's called drop. It's normal, and it happens to the one in charge too."),
+      sec("What helps","Water and a snack. Holding, or a blanket. Hearing “you did so good,” “I got you,” “I love you.” Rubbing the spots that got handled. Talking about it, or quiet if that's what's needed. Ask. Everybody needs something a little different."),
+      sec("On the phone","Don't hang up right away. Drop your voice soft. Ask what they need. Get water together. Send a voice note before bed. Text in the morning."),
+      sec("In person","Pull each other close. Blanket, water, a slow shower. Check any marks. Stay close and laugh a little. Fall asleep touching."),
+      sec("The next day","Check in: “How you feeling about last night? Anything you loved? Anything you'd change?” That's how you both get braver next time."),
+      sec("He needs it too","Being in charge takes something out of him. Thank him, tell him exactly what he did right, and check on him the same way."),
+      $("p",{class:"muted",style:"margin:0;font-size:13px",text:"The game does this for you: after a couple of rough cards, the next one is aftercare. You each also wrote what you need in “Our dynamic.”"})));
+  d.addEventListener("toggle",()=>{ careGuideOpen=d.open; });
+  return d;
+}
+function careWindDown(){
+  showMoment("🫶","Before you go","Aftercare","Water. Ask each other, “How you feeling?” Say one thing you loved. Stay on a few minutes.",9000);
+}
 const JAR_CAP = 50;
 const JAR_MS = [[10,"Ten nights in. This is turning into a habit 😏"],[25,"25 nights. Look at y'all."],[50,"50 nights. That jar is full. Starting you a new one."],[75,"75 nights and still choosing each other."],[100,"100 nights. That's love, period."],[150,"150 nights. Y'all are not playing."],[200,"200 nights together."],[365,"365 nights. A whole year of us."]];
 const JAR_COLORS = ["#f4a6bf","#e0609a","#f9cdd8","#c8a96b","#ff8fb1","#d94f86"];
@@ -2326,6 +2370,7 @@ function cardFace(){
     c.done ? $("div",{class:"stamp",text:"Done"}) : null,
     $("div",{class:"deck"},$("span",{text:DECKS[c.deck].name}),$("span",{class:"kind kind-"+(c.kind||"do"),text:c.kind==="ask"?"Ask "+nm(other(S.live.by||"a")):"Your turn to do it"})),
     $("div",{class:"text",text:c.text}),
+    c.deck==="care" ? $("button",{class:"care-link",onpointerdown:e=>e.stopPropagation(),ontouchstart:e=>e.stopPropagation(),onclick:e=>{ e.stopPropagation(); openCareGuide(); },text:"What's aftercare, and why now? →"}) : null,
     $("div",{class:"foot"},$("span",{text:`${LEVEL_EMOJI[li]} ${lv.name} \u00b7 card ${S.live.n}`}),$("span",{text: (c.deck==="brat"||c.deck==="yessir")&&S.settings.safeword ? "Safeword: "+S.settings.safeword : "Drawn by "+nm(S.live.by||"a")}))
   );
 }
@@ -2402,7 +2447,7 @@ function paceBox(){
 function viewSettings(){
   const st=S.settings;
   const nameIn=k=>{ const i=$("input",{id:"name"+k,value:nm(k),maxlength:"24"}); i.addEventListener("change",()=>{ const n=Object.assign({},S.settings.names||{}); n[k]=i.value.trim()||(k==="a"?"Player one":"Player two"); S.settings=Object.assign({},S.settings,{names:n}); save("settings"); toast("Saved."); render(); }); return i; };
-  const deckSel=$("select",{id:"cdeck"},Object.entries(DECKS).filter(([k])=>k!=="jyesno" && (k!=="irl"||irlOn())).map(([k,d])=>$("option",{value:k,text:d.name})));
+  const deckSel=$("select",{id:"cdeck"},Object.entries(DECKS).filter(([k])=>k!=="jyesno" && k!=="care" && (k!=="irl"||irlOn())).map(([k,d])=>$("option",{value:k,text:d.name})));
   const cText=$("textarea",{id:"ctext",placeholder:"An inside joke, a dare only you two get…",maxlength:"240"});
   const custom=st.custom||[], banned=st.banned||[];
   const cardName=id=>{ const d=id.startsWith("c-")?(custom.find(x=>x.id===id)||{}).deck:id.split("-")[0]; const c=d&&DECKS[d]?allCards(d).find(x=>x.id===id):null; return c?fill(c.text,me):"A card you removed"; };
@@ -2418,10 +2463,10 @@ function viewSettings(){
     codeCard(),
     me===bratKey() ? irlCard() : null,
     fold("pace","Game pace","How many Pillow Talk cards each level lasts",paceBox()),
-    fold("cats","Card categories",`${Object.keys(DECKS).filter(k=>k!=="jyesno" && (k!=="irl"||irlOn()) && !(st.paused||[]).includes(k)).length} of ${Object.keys(DECKS).filter(k=>k!=="jyesno" && (k!=="irl"||irlOn())).length} on`,$("div",{class:"form"},
+    fold("cats","Card categories",`${Object.keys(DECKS).filter(k=>k!=="jyesno" && k!=="care" && (k!=="irl"||irlOn()) && !(st.paused||[]).includes(k)).length} of ${Object.keys(DECKS).filter(k=>k!=="jyesno" && k!=="care" && (k!=="irl"||irlOn())).length} on`,$("div",{class:"form"},
       $("h3",{style:"font-size:20px",text:"Card categories"}),
       $("p",{class:"muted",style:"margin:0;font-size:13px",text:"Turn a category off and its cards stop coming up until you turn it back on."}),
-      ...Object.entries(DECKS).filter(([k])=>k!=="jyesno" && (k!=="irl" || irlOn())).map(([k,d])=>{
+      ...Object.entries(DECKS).filter(([k])=>k!=="jyesno" && k!=="care" && (k!=="irl" || irlOn())).map(([k,d])=>{
         const on=!(st.paused||[]).includes(k);
         const set=()=>{ const keys = k==="yesno" ? ["yesno","jyesno"] : [k]; let pz=(S.settings.paused||[]).filter(x=>!keys.includes(x)); if(on) pz=pz.concat(keys); S.settings=Object.assign({},S.settings,{paused:pz}); save("settings"); render(); };
         return $("div",{class:"srow"},
