@@ -2198,7 +2198,7 @@ function viewHome(){
   rows.sort((a,b)=>(b.hot?1:0)-(a.hot?1:0));
   const extras=[];
   { const owe=owedBy(me||"a"); if(owe.length) extras.push({t:`You owe ${partner}: ${owe[0].text}${owe.length>1?` (+${owe.length-1} more)`:""}`, go:()=>{ tab="rewards"; render(); window.scrollTo(0,0); }}); }
-  { const y=ymd(new Date(Date.now()-864e5)); if(me && S.live.roughNight===y && !lsGet("ftl_checkin_"+y,false)) extras.unshift({t:`🫶 Last night got rough. Check in on ${partner}`, go:()=>{ lsSet("ftl_checkin_"+y,true); showMoment("🫶","Next-day check-in",`Ask ${partner}`,`“How you feeling about last night? Anything you loved? Anything you'd change?”`,8000); render(); }}); }
+  { const y=ymd(new Date(Date.now()-864e5)); if(me && S.live.roughNight===y && !lsGet("ftl_checkin_"+y,false)) extras.unshift({t:`🫶 Check on ${partner} about last night`, go:()=>{ lsSet("ftl_checkin_"+y,true); showMoment("🫶","Check in",`Ask ${partner}`,`“You good after last night? What you love? Anything you'd change?”`,8000); render(); }}); }
   if(me && irlOn()) extras.unshift({t:`🎁 Together deck is on through ${fmtDay(irlCfg().to)}`, go:()=>{ if(!me){askWho();return;} openGame("cards"); }});
   if(me && dynRevealed() && !lsGet("ftl_dyn_opened",false)) extras.push({t:`🤝 Your agreement is ready`, go:()=>{ lsSet("ftl_dyn_opened",true); agreementOpen=true; tab="limits"; render(); window.scrollTo(0,0); }});
   if(me && revealed() && !lsGet("ftl_reveal_opened",false)) extras.push({t:`👀 The boundaries reveal is open`, go:()=>{ lsSet("ftl_reveal_opened",true); tab="limits"; render(); window.scrollTo(0,0); }});
@@ -2247,7 +2247,7 @@ function viewHome(){
 /* ---------- aftercare: after the rough stuff, the game slows you down on purpose ----------
    Two intense cards done (rough, spanking, whips, hair, tying up, spit, name-calling, attitude cards) and the next card is aftercare.
    Ending a night that got rough shows a short wind-down, and the next day Home reminds you to check in. */
-const CARE = [{"t": "That got intense. Pause. Ask {you}, “How you feeling right now?” Then actually listen."}, {"t": "Go get some water. Both of you. Right now, then come back."}, {"t": "Switch your voice soft. Tell {you} “I got you.” Mean it."}, {"t": "Ask {you} what would help right now: holding, talking, quiet, or just a minute."}, {"t": "Tell {you} one thing they did tonight that you loved."}, {"t": "Breathe together for one minute. Slow. Nobody talks."}, {"t": "Ask {you}: was anything too much? No defending. Just listen."}, {"r": "tamer", "t": "Tell {brat} she did so good. Be specific about what."}, {"r": "tamer", "t": "Tell {brat} exactly how you'd be holding her right now if you were there.", "m": "phone"}, {"r": "tamer", "t": "Pull {brat} in close and hold her. Rub the spots you were rough with.", "m": "irl"}, {"r": "tamer", "t": "Ask {brat} what made her feel safe tonight, so you can do it again."}, {"r": "brat", "t": "Check on {tamer}. Ask him how he's feeling after running things tonight."}, {"r": "brat", "t": "Thank {tamer} for taking care of you tonight. Tell him what made you feel safe."}, {"r": "brat", "t": "Tell {tamer} he did good. He needs to hear it too."}, {"t": "Don't hang up yet. Stay on the phone a few more minutes, even if it's quiet.", "m": "phone"}, {"t": "Talk about something light for a minute. Laugh a little. Come back down together.", "m": "phone"}, {"t": "Grab a blanket and get under it together.", "m": "irl"}, {"t": "Shower together, slow, no sex. Just take care of each other.", "m": "irl"}];
+const CARE = [{"t": "Check on {you}. “You good?” For real though."}, {"t": "Get some water. Both of y'all."}, {"t": "Get quiet for a second. Tell {you} “I got you.”"}, {"t": "Ask {you}, “What you need right now?”"}, {"t": "Tell {you} your favorite part of tonight."}, {"t": "Just breathe with {you} for a minute. No talking."}, {"t": "Ask {you} if anything was too much. Just hear them out."}, {"r": "tamer", "t": "Tell {brat} she did so good. Tell her what part."}, {"r": "tamer", "t": "Tell {brat} how you'd be holding her right now if you were there.", "m": "phone"}, {"r": "tamer", "t": "Pull {brat} close. Rub where you got rough.", "m": "irl"}, {"r": "tamer", "t": "Ask {brat} what made her feel safe tonight."}, {"r": "brat", "t": "Check on {tamer}. Running things takes a lot. Ask him how he's doing."}, {"r": "brat", "t": "Thank {tamer} for taking care of you tonight."}, {"r": "brat", "t": "Tell {tamer} he did good. He needs to hear that too."}, {"t": "Don't hang up yet. Stay on the line a little, even if nobody's talking.", "m": "phone"}, {"t": "Talk about something regular for a minute. Laugh a little.", "m": "phone"}, {"t": "Get under a blanket together.", "m": "irl"}, {"t": "Shower together. No sex. Just take care of each other.", "m": "irl"}];
 const INTENSE = new Set(["rough","spank","whip","tied","hair","spit","names","brat"]);
 const isIntense = c => !!c && c.deck!=="care" && c.kind!=="ask" && (c.tags||[]).some(t=>INTENSE.has(t));
 const CARE_EVERY = 2;
@@ -2263,21 +2263,21 @@ function openCareGuide(){ careGuideOpen=true; tab="limits"; render(); setTimeout
 function careGuide(){
   const P=nm(other(me||"a")), sec=(t,...lines)=>$("div",{class:"cg-sec"},$("h4",{text:t}),...lines.map(l=>$("p",{text:l})));
   const d=$("details",{class:"form fold care-guide",open:careGuideOpen},
-    $("summary",{},$("span",{class:"stack",style:"gap:2px"},$("span",{class:"fold-t",text:"🫶 Aftercare 101"}),$("span",{class:"muted",style:"font-size:13px",text:"What it is, why it matters after the rough stuff, and how to do it"}))),
+    $("summary",{},$("span",{class:"stack",style:"gap:2px"},$("span",{class:"fold-t",text:"🫶 Aftercare 101"}),$("span",{class:"muted",style:"font-size:13px",text:"Taking care of each other after it gets rough"}))),
     $("div",{class:"fold-body"},
-      sec("What it is","Aftercare is how you take care of each other after things get rough or intense. It's not extra. It's part of it, same as the safeword."),
-      sec("Why it matters","Rough play floods you both with adrenaline. When it wears off, either of you can crash a little: shaky, tired, quiet, emotional, even sad or insecure. Sometimes it hits the next day. That's called drop. It's normal, and it happens to the one in charge too."),
-      sec("What helps","Water and a snack. Holding, or a blanket. Hearing “you did so good,” “I got you,” “I love you.” Rubbing the spots that got handled. Talking about it, or quiet if that's what's needed. Ask. Everybody needs something a little different."),
-      sec("On the phone","Don't hang up right away. Drop your voice soft. Ask what they need. Get water together. Send a voice note before bed. Text in the morning."),
-      sec("In person","Pull each other close. Blanket, water, a slow shower. Check any marks. Stay close and laugh a little. Fall asleep touching."),
-      sec("The next day","Check in: “How you feeling about last night? Anything you loved? Anything you'd change?” That's how you both get braver next time."),
-      sec("He needs it too","Being in charge takes something out of him. Thank him, tell him exactly what he did right, and check on him the same way."),
-      $("p",{class:"muted",style:"margin:0;font-size:13px",text:"The game does this for you: after a couple of rough cards, the next one is aftercare. You each also wrote what you need in “Our dynamic.”"})));
+      sec("What it is","Aftercare is how y'all take care of each other after it gets rough. It's part of it, not extra."),
+      sec("Why it matters","Rough stuff gets your adrenaline going. When it wears off, either of you can crash a little: tired, quiet, emotional, sometimes a little low the next day. That's called drop. It's normal, and it can hit him too."),
+      sec("What helps","Water. A snack. Being held. Hearing “you did so good” or “I got you.” Talking about it, or just being quiet together. Everybody's different, so ask."),
+      sec("On the phone","Don't hang up right away. Get soft. Ask each other what you need. Send a voice note before bed, and text in the morning."),
+      sec("In person","Hold each other. Blanket, water, a slow shower. Check on any marks. Fall asleep close."),
+      sec("The next day","Check in: “You good after last night? What you love? Anything you'd change?” That's how it gets better every time."),
+      sec("He needs it too","Being in charge takes something out of him. Thank him and tell him what he did right."),
+      $("p",{class:"muted",style:"margin:0;font-size:13px",text:"The game helps: after rough cards, an aftercare card comes up on its own."})));
   d.addEventListener("toggle",()=>{ careGuideOpen=d.open; });
   return d;
 }
 function careWindDown(){
-  showMoment("🫶","Before you go","Aftercare","Water. Ask each other, “How you feeling?” Say one thing you loved. Stay on a few minutes.",9000);
+  showMoment("🫶","Before you go","Take care of each other","Get some water, ask “you good?”, say your favorite part of tonight, and stay on a little.",9000);
 }
 const JAR_CAP = 50;
 const JAR_MS = [[10,"Ten nights in. This is turning into a habit 😏"],[25,"25 nights. Look at y'all."],[50,"50 nights. That jar is full. Starting you a new one."],[75,"75 nights and still choosing each other."],[100,"100 nights. That's love, period."],[150,"150 nights. Y'all are not playing."],[200,"200 nights together."],[365,"365 nights. A whole year of us."]];
@@ -2370,7 +2370,7 @@ function cardFace(){
     c.done ? $("div",{class:"stamp",text:"Done"}) : null,
     $("div",{class:"deck"},$("span",{text:DECKS[c.deck].name}),$("span",{class:"kind kind-"+(c.kind||"do"),text:c.kind==="ask"?"Ask "+nm(other(S.live.by||"a")):"Your turn to do it"})),
     $("div",{class:"text",text:c.text}),
-    c.deck==="care" ? $("button",{class:"care-link",onpointerdown:e=>e.stopPropagation(),ontouchstart:e=>e.stopPropagation(),onclick:e=>{ e.stopPropagation(); openCareGuide(); },text:"What's aftercare, and why now? →"}) : null,
+    c.deck==="care" ? $("button",{class:"care-link",onpointerdown:e=>e.stopPropagation(),ontouchstart:e=>e.stopPropagation(),onclick:e=>{ e.stopPropagation(); openCareGuide(); },text:"What's aftercare? →"}) : null,
     $("div",{class:"foot"},$("span",{text:`${LEVEL_EMOJI[li]} ${lv.name} \u00b7 card ${S.live.n}`}),$("span",{text: (c.deck==="brat"||c.deck==="yessir")&&S.settings.safeword ? "Safeword: "+S.settings.safeword : "Drawn by "+nm(S.live.by||"a")}))
   );
 }
